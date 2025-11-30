@@ -22,16 +22,17 @@ export interface EnvConfig {
 
 // 환경변수 검증 및 반환
 export const getEnvConfig = (): EnvConfig => {
-  const requiredEnvVars = [
-    'DB_HOST',
-    'DB_USER',
-    'DB_NAME',
-    'JWT_SECRET',
-  ];
+  // Railway MySQL 환경변수 또는 일반 환경변수 확인
+  const hasDbHost = process.env.MYSQL_HOST || process.env.DB_HOST;
+  const hasDbUser = process.env.MYSQL_USER || process.env.DB_USER;
+  const hasDbName = process.env.MYSQL_DATABASE || process.env.DB_NAME;
+  const hasJwtSecret = process.env.JWT_SECRET;
 
-  const missingVars = requiredEnvVars.filter(
-    (varName) => process.env[varName] === undefined
-  );
+  const missingVars: string[] = [];
+  if (!hasDbHost) missingVars.push('DB_HOST 또는 MYSQL_HOST');
+  if (!hasDbUser) missingVars.push('DB_USER 또는 MYSQL_USER');
+  if (!hasDbName) missingVars.push('DB_NAME 또는 MYSQL_DATABASE');
+  if (!hasJwtSecret) missingVars.push('JWT_SECRET');
 
   if (missingVars.length > 0) {
     throw new Error(
