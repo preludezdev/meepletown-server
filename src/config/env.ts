@@ -39,15 +39,26 @@ export const getEnvConfig = (): EnvConfig => {
     );
   }
 
+  // Railway MySQL 환경변수 지원 (Railway는 MYSQL_* 접두사 사용)
+  // 우선순위: Railway 변수 > 기존 변수
+  const dbHost = process.env.MYSQL_HOST || process.env.DB_HOST!;
+  const dbUser = process.env.MYSQL_USER || process.env.DB_USER!;
+  const dbPassword = process.env.MYSQL_PASSWORD || process.env.DB_PASSWORD || '';
+  const dbName = process.env.MYSQL_DATABASE || process.env.DB_NAME!;
+  const dbPort = parseInt(
+    process.env.MYSQL_PORT || process.env.DB_PORT || '3306',
+    10
+  );
+
   return {
     port: parseInt(process.env.PORT || '3000', 10),
     nodeEnv: process.env.NODE_ENV || 'development',
     db: {
-      host: process.env.DB_HOST!,
-      port: parseInt(process.env.DB_PORT || '3306', 10),
-      user: process.env.DB_USER!,
-      password: process.env.DB_PASSWORD || '', // 빈 문자열 허용 (로컬 MySQL은 비밀번호 없을 수 있음)
-      name: process.env.DB_NAME!,
+      host: dbHost,
+      port: dbPort,
+      user: dbUser,
+      password: dbPassword,
+      name: dbName,
     },
     jwt: {
       secret: process.env.JWT_SECRET!,

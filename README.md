@@ -201,6 +201,56 @@ Authorization: Bearer <your_jwt_token>
 - **JWT**: 인증 토큰
 - **Axios**: HTTP 클라이언트 (카카오 API 호출)
 
+## 🚂 Railway 배포 가이드
+
+### 1. Railway 계정 생성
+1. https://railway.app 접속
+2. GitHub 계정으로 로그인
+
+### 2. 프로젝트 생성
+1. "New Project" 클릭
+2. "Deploy from GitHub repo" 선택
+3. `preludezdev/meepletown-server` 저장소 선택
+
+### 3. MySQL 데이터베이스 추가
+1. 프로젝트 대시보드에서 "New Service" 클릭
+2. "Database" → "MySQL" 선택
+3. Railway가 자동으로 MySQL 인스턴스 생성 및 연결 정보 제공
+
+### 4. 환경변수 설정
+Railway 대시보드 → Variables 탭에서 설정:
+
+**자동 설정됨 (MySQL 서비스 추가 시):**
+- `MYSQL_HOST` - 자동 설정
+- `MYSQL_PORT` - 자동 설정
+- `MYSQL_USER` - 자동 설정
+- `MYSQL_PASSWORD` - 자동 설정
+- `MYSQL_DATABASE` - 자동 설정
+- `PORT` - Railway가 자동 설정
+
+**수동 설정 필요:**
+- `NODE_ENV=production`
+- `JWT_SECRET` - 로컬에서 생성한 값 사용:
+  ```bash
+  node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+  ```
+- `JWT_EXPIRES_IN=7d` (선택사항)
+
+### 5. 데이터베이스 마이그레이션
+Railway MySQL 서비스의 "Connect" 탭에서 연결 정보 확인 후:
+
+```bash
+# Railway MySQL에 연결하여 마이그레이션 실행
+mysql -h [MYSQL_HOST] -P [MYSQL_PORT] -u [MYSQL_USER] -p[MYSQL_PASSWORD] [MYSQL_DATABASE] < migrations/001_initial_schema.sql
+```
+
+또는 Railway MySQL 서비스의 "Data" 탭에서 직접 SQL 실행 가능
+
+### 6. 배포 확인
+- Railway가 자동으로 빌드 및 배포
+- 배포 완료 후 제공되는 URL로 접속 테스트
+- Health check: `https://your-app.railway.app/health`
+
 ## 📌 주의사항
 
 1. **환경변수**: `.env` 파일은 절대 커밋하지 마세요
@@ -208,6 +258,7 @@ Authorization: Bearer <your_jwt_token>
 3. **이미지 업로드**: 현재는 URL을 받는 방식입니다. 실제 파일 업로드를 원하면 multer 등을 추가해야 합니다.
 4. **카카오 로그인**: 카카오 개발자 콘솔에서 앱을 등록하고 Redirect URI를 설정해야 합니다.
 5. **에러 처리**: 모든 에러는 적절한 HTTP 상태 코드와 함께 반환됩니다.
+6. **Railway MySQL**: Railway MySQL 서비스 추가 시 `MYSQL_*` 환경변수가 자동으로 설정됩니다. 코드는 Railway와 일반 환경변수 모두 지원합니다.
 
 ## 📚 참고 자료
 
