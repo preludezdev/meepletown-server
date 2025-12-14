@@ -1,8 +1,5 @@
 -- MeepleTown v0 초기 스키마 생성
--- 실행 전: 데이터베이스 생성 필요
--- CREATE DATABASE meepletown_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
-USE meepletown_db;
+-- Railway 자동 마이그레이션용 (USE 구문 제거)
 
 -- Users 테이블 (소셜 로그인 기반)
 CREATE TABLE IF NOT EXISTS users (

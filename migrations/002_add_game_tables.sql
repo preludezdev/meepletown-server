@@ -1,7 +1,5 @@
 -- MeepleTown 게임 관련 테이블 추가
--- 실행: mysql -u your_db_user -p meepletown_db < migrations/002_add_game_tables.sql
-
-USE meepletown_db;
+-- Railway 자동 마이그레이션용 (USE 구문 제거)
 
 -- Games 테이블 (BGG 게임 데이터)
 CREATE TABLE IF NOT EXISTS games (
