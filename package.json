@@ -1,7 +1,7 @@
 {
-  "name": "meepletown-server",
+  "name": "meepleon-server",
   "version": "0.1.0",
-  "description": "MeepleTown Backend Server",
+  "description": "MeepleOn Backend Server",
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
@@ -11,7 +11,7 @@
     "migrate": "ts-node src/config/migrate.ts"
   },
   "keywords": [
-    "meepletown",
+    "meepleon",
     "boardgame",
     "backend"
   ],

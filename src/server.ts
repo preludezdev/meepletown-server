@@ -22,7 +22,7 @@ const startServer = async (): Promise<void> => {
 
     // 서버 시작
     app.listen(env.port, () => {
-      console.log(`🚀 MeepleTown Server is running on port ${env.port}`);
+      console.log(`🚀 MeepleOn Server is running on port ${env.port}`);
       console.log(`📝 Environment: ${env.nodeEnv}`);
       console.log(`🔗 Health check: http://localhost:${env.port}/health`);
       console.log(`🌐 API endpoint: http://localhost:${env.port}/api/v1`);

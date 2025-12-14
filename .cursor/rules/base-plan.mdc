@@ -2,7 +2,7 @@
 appliesTo: ["plan"]
 ---
 
-# MeepleTown 서버 - Plan 모드 기본 가이드라인
+# MeepleOn 서버 - Plan 모드 기본 가이드라인
 
 ## 📋 플랜 생성 원칙
 
@@ -18,7 +18,7 @@ appliesTo: ["plan"]
 3. **구현 단계**: TODO 형태로 구체적인 작업 목록
 4. **주의사항**: 환경변수, 마이그레이션, 테스트 등
 
-### 3. MeepleTown 특화 규칙
+### 3. MeepleOn 특화 규칙
 
 #### 데이터베이스 설계
 - MySQL 기준으로 명확한 관계 정의 (1:N, N:N)

@@ -1,6 +1,6 @@
-# MeepleTown Server v1
+# MeepleOn Server v1
 
-MeepleTown 백엔드 서버 v1 - 게임 상세 정보 및 평점 기능 추가
+MeepleOn 백엔드 서버 v1 - 게임 상세 정보 및 평점 기능 추가
 
 ## 🚀 빠른 시작
 
@@ -24,7 +24,7 @@ DB_HOST=localhost
 DB_PORT=3306
 DB_USER=your_db_user
 DB_PASSWORD=your_db_password
-DB_NAME=meepletown_db
+DB_NAME=meepleon_db
 
 # JWT
 JWT_SECRET=your_jwt_secret_key_change_this_in_production
@@ -40,11 +40,11 @@ MySQL 데이터베이스를 생성하고 마이그레이션을 실행하세요:
 
 ```bash
 # 데이터베이스 생성 (MySQL 클라이언트에서)
-CREATE DATABASE meepletown_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE meepleon_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 # 마이그레이션 실행
-mysql -u your_db_user -p meepletown_db < migrations/001_initial_schema.sql
-mysql -u your_db_user -p meepletown_db < migrations/002_add_game_tables.sql
+mysql -u your_db_user -p meepleon_db < migrations/001_initial_schema.sql
+mysql -u your_db_user -p meepleon_db < migrations/002_add_game_tables.sql
 ```
 
 ### 4. 서버 실행
@@ -61,7 +61,7 @@ npm start
 ## 📁 프로젝트 구조
 
 ```
-meepletown-server/
+meepleon-server/
 ├── src/
 │   ├── config/          # 설정 파일 (DB, 환경변수)
 │   ├── models/          # 타입 정의 (User, Listing, Game, GameRating, GameReview)
@@ -242,7 +242,7 @@ Authorization: Bearer <your_jwt_token>
 ### 2. 프로젝트 생성
 1. "New Project" 클릭
 2. "Deploy from GitHub repo" 선택
-3. `preludezdev/meepletown-server` 저장소 선택
+3. `preludezdev/meepleon-server` 저장소 선택
 
 ### 3. MySQL 데이터베이스 추가
 1. 프로젝트 대시보드에서 "New Service" 클릭

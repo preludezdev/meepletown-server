@@ -18,7 +18,7 @@ const options: swaggerJsdoc.Options = {
         description: '로컬 개발 서버',
       },
       {
-        url: 'https://meepletown-server-production.up.railway.app',
+        url: 'https://meepleon-server-production.up.railway.app',
         description: 'Production 서버',
       },
     ],

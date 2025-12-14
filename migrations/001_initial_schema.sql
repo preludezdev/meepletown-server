@@ -1,4 +1,4 @@
--- MeepleTown v0 초기 스키마 생성
+-- MeepleOn v0 초기 스키마 생성
 -- Railway 자동 마이그레이션용 (USE 구문 제거)
 
 -- Users 테이블 (소셜 로그인 기반)

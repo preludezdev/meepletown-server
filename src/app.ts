@@ -21,7 +21,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 
 // Health check 엔드포인트
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', message: 'MeepleTown Server is running' });
+  res.json({ status: 'ok', message: 'MeepleOn Server is running' });
 });
 
 // API 라우터 설정

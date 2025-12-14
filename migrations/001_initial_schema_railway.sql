@@ -1,4 +1,4 @@
--- MeepleTown v0 초기 스키마 생성 (Railway용)
+-- MeepleOn v0 초기 스키마 생성 (Railway용)
 -- Railway는 'railway' 데이터베이스를 기본 사용
 
 -- Users 테이블 (소셜 로그인 기반)

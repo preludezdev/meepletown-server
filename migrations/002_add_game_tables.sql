@@ -1,4 +1,4 @@
--- MeepleTown 게임 관련 테이블 추가
+-- MeepleOn 게임 관련 테이블 추가
 -- Railway 자동 마이그레이션용 (USE 구문 제거)
 
 -- Games 테이블 (BGG 게임 데이터)
