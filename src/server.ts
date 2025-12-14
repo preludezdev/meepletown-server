@@ -2,12 +2,16 @@ import app from './app';
 import { env } from './config/env';
 import { testConnection } from './config/database';
 import { initScheduler } from './services/schedulerService';
+import { runMigrations } from './config/migrate';
 
 // 서버 시작
 const startServer = async (): Promise<void> => {
   try {
     // 데이터베이스 연결 테스트
     await testConnection();
+
+    // 마이그레이션 자동 실행
+    await runMigrations();
 
     // 스케줄러 초기화
     initScheduler();
