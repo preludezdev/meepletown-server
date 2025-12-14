@@ -3,6 +3,7 @@ import { env } from './config/env';
 import { testConnection } from './config/database';
 import { initScheduler } from './services/schedulerService';
 import { runMigrations } from './config/migrate';
+import { initializeGameData } from './services/gameInitService';
 
 // 서버 시작
 const startServer = async (): Promise<void> => {
@@ -13,6 +14,9 @@ const startServer = async (): Promise<void> => {
     // 마이그레이션 자동 실행
     await runMigrations();
 
+    // 인기 게임 데이터 초기화 (백그라운드)
+    initializeGameData();
+
     // 스케줄러 초기화
     initScheduler();
 
@@ -22,6 +26,7 @@ const startServer = async (): Promise<void> => {
       console.log(`📝 Environment: ${env.nodeEnv}`);
       console.log(`🔗 Health check: http://localhost:${env.port}/health`);
       console.log(`🌐 API endpoint: http://localhost:${env.port}/api/v1`);
+      console.log(`📚 API Docs: http://localhost:${env.port}/api-docs`);
     });
   } catch (error) {
     console.error('❌ 서버 시작 실패:', error);
