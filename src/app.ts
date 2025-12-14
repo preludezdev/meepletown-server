@@ -1,7 +1,9 @@
 import express, { Application } from 'express';
 import cors from 'cors';
+import swaggerUi from 'swagger-ui-express';
 import routes from './routes';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
+import { swaggerSpec } from './config/swagger';
 
 // Express 앱 생성
 const app: Application = express();
@@ -10,6 +12,12 @@ const app: Application = express();
 app.use(cors()); // CORS 허용
 app.use(express.json()); // JSON 파싱
 app.use(express.urlencoded({ extended: true })); // URL 인코딩 파싱
+
+// Swagger API 문서
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'MeepleTown API Docs',
+}));
 
 // Health check 엔드포인트
 app.get('/health', (_req, res) => {
