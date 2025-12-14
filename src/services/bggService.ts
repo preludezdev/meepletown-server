@@ -18,7 +18,11 @@ export const fetchGameFromBGG = async (bggId: number): Promise<BggGameData | nul
   try {
     // BGG XML API2: thing?id={bggId}&type=boardgame&stats=1
     const url = `${BGG_API_BASE_URL}/thing?id=${bggId}&type=boardgame&stats=1`;
-    const response = await axios.get(url);
+    const response = await axios.get(url, {
+      headers: {
+        'User-Agent': 'MeepleOn/1.0 (https://meepleon.com)',
+      },
+    });
 
     // XML 파싱
     const parsed = parser.parse(response.data);
@@ -150,7 +154,11 @@ export const fetchGamesFromBGG = async (bggIds: number[]): Promise<BggGameData[]
 export const fetchHotGamesFromBGG = async (): Promise<number[]> => {
   try {
     const url = `${BGG_API_BASE_URL}/hot?type=boardgame`;
-    const response = await axios.get(url);
+    const response = await axios.get(url, {
+      headers: {
+        'User-Agent': 'MeepleOn/1.0 (https://meepleon.com)',
+      },
+    });
     const parsed = parser.parse(response.data);
 
     const items = parsed?.items?.item;

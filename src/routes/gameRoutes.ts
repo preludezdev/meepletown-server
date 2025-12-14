@@ -18,7 +18,7 @@ const router = Router();
  *         required: true
  *         schema:
  *           type: integer
- *         description: BoardGameGeek 게임 ID (예: 174430 = 글룸헤이븐)
+ *         description: BoardGameGeek 게임 ID (예 - 174430 글룸헤이븐)
  *     responses:
  *       200:
  *         description: 게임 정보 조회 성공

@@ -5,11 +5,11 @@ const options: swaggerJsdoc.Options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'MeepleTown API',
+      title: 'MeepleOn API',
       version: '1.0.0',
-      description: '미플타운 백엔드 API 문서 - 보드게임 중고거래 및 정보 플랫폼',
+      description: '미플온 백엔드 API 문서 - 보드게임 중고거래 및 정보 플랫폼',
       contact: {
-        name: 'MeepleTown',
+        name: 'MeepleOn',
       },
     },
     servers: [

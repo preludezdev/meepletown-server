@@ -16,7 +16,7 @@ app.use(express.urlencoded({ extended: true })); // URL 인코딩 파싱
 // Swagger API 문서
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'MeepleTown API Docs',
+  customSiteTitle: 'MeepleOn API Docs',
 }));
 
 // Health check 엔드포인트
