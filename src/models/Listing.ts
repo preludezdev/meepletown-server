@@ -7,7 +7,8 @@ export type ListingStatus = 'selling' | 'sold'; // 판매중 / 판매완료
 export interface Listing {
   id: number;
   userId: number;
-  gameName: string;
+  gameId: number | null; // 게임 ID (games 테이블 참조)
+  gameName: string; // 레거시 호환용
   title: string | null;
   price: number;
   method: ListingMethod;
@@ -27,7 +28,8 @@ export interface ListingWithImages extends Listing {
 
 // Listing 생성 요청 타입
 export interface CreateListingRequest {
-  gameName: string;
+  gameBggId?: number; // BGG 게임 ID (우선)
+  gameName?: string; // 게임명 (레거시 호환)
   title?: string;
   price: number;
   method: ListingMethod;
@@ -38,6 +40,7 @@ export interface CreateListingRequest {
 
 // Listing 업데이트 요청 타입
 export interface UpdateListingRequest {
+  gameBggId?: number;
   gameName?: string;
   title?: string;
   price?: number;

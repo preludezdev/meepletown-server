@@ -5,11 +5,11 @@ import { validateRequest } from '../middlewares/validateRequest';
 
 const router = Router();
 
-// 카카오 로그인
+// 구글 로그인
 router.post(
-  '/kakao',
+  '/google',
   validateRequest(['accessToken']),
-  authController.kakaoLogin
+  authController.googleLogin
 );
 
 // 현재 사용자 정보 조회 (인증 필요)

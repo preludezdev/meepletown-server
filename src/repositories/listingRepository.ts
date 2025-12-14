@@ -88,9 +88,10 @@ export const findListingsByUserId = async (
 // Listing 생성
 export const createListing = async (
   userId: number,
-  listingData: CreateListingRequest
+  listingData: CreateListingRequest & { gameId?: number }
 ): Promise<Listing> => {
   const {
+    gameId,
     gameName,
     title,
     price,
@@ -101,10 +102,11 @@ export const createListing = async (
   } = listingData;
 
   const [result] = await pool.execute(
-    `INSERT INTO listings (userId, gameName, title, price, method, region, description, contactLink)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO listings (userId, gameId, gameName, title, price, method, region, description, contactLink)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       userId,
+      gameId || null,
       gameName,
       title || null,
       price,
@@ -126,11 +128,15 @@ export const createListing = async (
 // Listing 업데이트
 export const updateListing = async (
   id: number,
-  listingData: UpdateListingRequest
+  listingData: UpdateListingRequest & { gameId?: number }
 ): Promise<Listing | null> => {
   const fields: string[] = [];
   const values: any[] = [];
 
+  if (listingData.gameId !== undefined) {
+    fields.push('gameId = ?');
+    values.push(listingData.gameId);
+  }
   if (listingData.gameName !== undefined) {
     fields.push('gameName = ?');
     values.push(listingData.gameName);

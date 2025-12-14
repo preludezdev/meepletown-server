@@ -12,6 +12,7 @@ import {
   createListingImage,
   deleteImagesByListingId,
 } from '../repositories/listingImageRepository';
+import { getOrSyncGame } from './gameSyncService';
 import {
   Listing,
   ListingWithImages,
@@ -69,7 +70,37 @@ export const createListingService = async (
   userId: number,
   listingData: CreateListingRequest
 ): Promise<Listing> => {
-  return createListing(userId, listingData);
+  // gameBggId가 제공된 경우, Game 테이블에서 조회/동기화
+  let gameId: number | undefined;
+  let gameName = listingData.gameName || '';
+
+  if (listingData.gameBggId) {
+    try {
+      const game = await getOrSyncGame(listingData.gameBggId);
+      gameId = game.id;
+      gameName = game.nameKo || game.nameEn; // 게임명 자동 설정
+    } catch (error) {
+      console.error('게임 동기화 실패:', error);
+      // 게임 동기화 실패해도 매물 등록은 허용
+      if (!listingData.gameName) {
+        throw new BadRequestError('gameBggId로 게임을 찾을 수 없습니다. gameName을 제공해주세요.');
+      }
+    }
+  }
+
+  // gameBggId도 gameName도 없으면 에러
+  if (!gameId && !gameName) {
+    throw new BadRequestError('gameBggId 또는 gameName 중 하나는 필수입니다');
+  }
+
+  // Repository에 전달할 데이터 준비
+  const listingDataWithGame = {
+    ...listingData,
+    gameId,
+    gameName,
+  };
+
+  return createListing(userId, listingDataWithGame);
 };
 
 // Listing 이미지 추가 (최대 3장)
@@ -115,7 +146,28 @@ export const updateListingById = async (
     throw new ForbiddenError('본인의 매물만 수정할 수 있습니다');
   }
 
-  const updatedListing = await updateListing(id, listingData);
+  // gameBggId가 제공된 경우, Game 테이블에서 조회/동기화
+  let gameId: number | undefined;
+  let gameName = listingData.gameName;
+
+  if (listingData.gameBggId) {
+    try {
+      const game = await getOrSyncGame(listingData.gameBggId);
+      gameId = game.id;
+      gameName = game.nameKo || game.nameEn;
+    } catch (error) {
+      console.error('게임 동기화 실패:', error);
+      // 동기화 실패해도 기존 gameName 유지
+    }
+  }
+
+  const listingDataWithGame = {
+    ...listingData,
+    ...(gameId !== undefined && { gameId }),
+    ...(gameName !== undefined && { gameName }),
+  };
+
+  const updatedListing = await updateListing(id, listingDataWithGame);
   if (!updatedListing) {
     throw new NotFoundError('매물을 찾을 수 없습니다');
   }

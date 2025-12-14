@@ -1,6 +1,6 @@
-# MeepleTown Server v0
+# MeepleTown Server v1
 
-MeepleTown 백엔드 서버 v0 - 중고거래 최소 기능 버전
+MeepleTown 백엔드 서버 v1 - 게임 상세 정보 및 평점 기능 추가
 
 ## 🚀 빠른 시작
 
@@ -29,6 +29,9 @@ DB_NAME=meepletown_db
 # JWT
 JWT_SECRET=your_jwt_secret_key_change_this_in_production
 JWT_EXPIRES_IN=7d
+
+# Google OAuth (optional, 구글 로그인 사용 시)
+GOOGLE_CLIENT_ID=your_google_client_id
 ```
 
 ### 3. 데이터베이스 설정
@@ -41,6 +44,7 @@ CREATE DATABASE meepletown_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 # 마이그레이션 실행
 mysql -u your_db_user -p meepletown_db < migrations/001_initial_schema.sql
+mysql -u your_db_user -p meepletown_db < migrations/002_add_game_tables.sql
 ```
 
 ### 4. 서버 실행
@@ -60,17 +64,17 @@ npm start
 meepletown-server/
 ├── src/
 │   ├── config/          # 설정 파일 (DB, 환경변수)
-│   ├── models/           # 타입 정의 (User, Listing, ListingImage)
-│   ├── repositories/     # DB 접근 레이어
-│   ├── services/         # 비즈니스 로직 레이어
-│   ├── controllers/      # HTTP 레벨 로직
-│   ├── routes/           # Express 라우터
-│   ├── middlewares/      # 미들웨어 (인증, 에러 핸들링)
-│   ├── utils/            # 유틸리티 함수
-│   ├── app.ts            # Express 앱 설정
-│   └── server.ts         # 서버 진입점
-├── migrations/           # DB 마이그레이션 SQL
-├── .env                  # 환경변수 (gitignore)
+│   ├── models/          # 타입 정의 (User, Listing, Game, GameRating, GameReview)
+│   ├── repositories/    # DB 접근 레이어
+│   ├── services/        # 비즈니스 로직 레이어
+│   ├── controllers/     # HTTP 레벨 로직
+│   ├── routes/          # Express 라우터
+│   ├── middlewares/     # 미들웨어 (인증, 에러 핸들링)
+│   ├── utils/           # 유틸리티 함수
+│   ├── app.ts           # Express 앱 설정
+│   └── server.ts        # 서버 진입점
+├── migrations/          # DB 마이그레이션 SQL
+├── .env                 # 환경변수 (gitignore)
 ├── package.json
 ├── tsconfig.json
 └── README.md
@@ -81,8 +85,8 @@ meepletown-server/
 기본 URL: `/api/v1`
 
 ### 인증 (Auth)
-- `POST /api/v1/auth/kakao` - 카카오 로그인
-  - Body: `{ "accessToken": "카카오_액세스_토큰" }`
+- `POST /api/v1/auth/google` - 구글 로그인
+  - Body: `{ "accessToken": "구글_액세스_토큰" }`
 - `GET /api/v1/auth/me` - 현재 사용자 정보 (인증 필요)
 
 ### 홈 (Home)
@@ -93,31 +97,45 @@ meepletown-server/
 - `GET /api/v1/users/:id` - 사용자 조회 (비로그인 허용)
 - `GET /api/v1/users/me/listings` - 내 매물 목록 (인증 필요)
 
+### 게임 (Games) - 🆕
+- `GET /api/v1/games/:bggId` - 게임 상세 조회 (비로그인 허용)
+  - BGG 데이터 + 미플온 평점 통합 조회
+  - 로그인 시 사용자의 평가 여부 포함
+- `GET /api/v1/games/:bggId/ratings` - 게임 평가 목록 조회 (비로그인 허용)
+  - Query: `?page=1&pageSize=20`
+- `POST /api/v1/games/:bggId/ratings` - 게임 평가 등록 (인증 필요)
+  - Body: `{ "rating": 8.5, "comment": "재미있어요!" }`
+- `PATCH /api/v1/games/:bggId/ratings/:ratingId` - 게임 평가 수정 (인증 필요)
+  - Body: `{ "rating": 9.0, "comment": "정말 최고!" }`
+- `DELETE /api/v1/games/:bggId/ratings/:ratingId` - 게임 평가 삭제 (인증 필요)
+- `POST /api/v1/games/sync/:bggId` - 게임 동기화 (수동 실행)
+- `POST /api/v1/games/sync` - 여러 게임 동기화
+  - Body: `{ "bggIds": [174430, 167791, ...] }`
+
 ### 중고거래 (Listings)
 - `GET /api/v1/listings` - 매물 목록 조회 (비로그인 허용)
   - Query: `?gameName=게임명&method=direct|delivery&sort=latest&page=1&pageSize=20`
 - `GET /api/v1/listings/:id` - 매물 상세 조회 (비로그인 허용)
 - `POST /api/v1/listings` - 매물 등록 (인증 필요)
-  - Body: `{ "gameName": "게임명", "price": 10000, "method": "direct|delivery", "region": "서울", "title": "제목(옵션)", "description": "설명(옵션)", "contactLink": "연락링크(옵션)" }`
+  - Body: `{ "gameBggId": 174430, "price": 50000, "method": "direct", "region": "서울", ... }`
+  - 또는: `{ "gameName": "글룸헤이븐", "price": 50000, ... }` (레거시 호환)
 - `POST /api/v1/listings/:id/images` - 매물 이미지 추가 (인증 필요, 최대 3장)
-  - Body: `{ "images": [{ "url": "이미지URL", "orderIndex": 0 }, ...] }`
 - `PATCH /api/v1/listings/:id/status` - 매물 상태 변경 (인증 필요)
-  - Body: `{ "status": "selling|sold" }`
 - `DELETE /api/v1/listings/:id` - 매물 삭제 (인증 필요)
 
 ## 🔐 인증
 
-JWT 토큰을 사용합니다. 카카오 로그인 후 받은 JWT 토큰을 `Authorization` 헤더에 Bearer 토큰으로 포함해야 합니다:
+JWT 토큰을 사용합니다. 구글 로그인 후 받은 JWT 토큰을 `Authorization` 헤더에 Bearer 토큰으로 포함해야 합니다:
 
 ```
 Authorization: Bearer <your_jwt_token>
 ```
 
-### 카카오 로그인 플로우
+### 구글 로그인 플로우
 
-1. 클라이언트에서 카카오 OAuth 인증 완료 후 `accessToken` 받기
-2. 서버에 `POST /api/v1/auth/kakao`로 `accessToken` 전송
-3. 서버에서 카카오 API로 사용자 정보 조회
+1. 클라이언트에서 Google OAuth 인증 완료 후 `accessToken` 받기
+2. 서버에 `POST /api/v1/auth/google`로 `accessToken` 전송
+3. 서버에서 구글 API로 사용자 정보 조회
 4. DB에 사용자 저장/조회 후 JWT 토큰 발급
 5. 클라이언트에서 JWT 토큰 저장 후 API 호출 시 사용
 
@@ -151,47 +169,59 @@ Authorization: Bearer <your_jwt_token>
 - `nickname`: 닉네임
 - `avatar`: 프로필 이미지 URL
 - `socialId`: 소셜 로그인 ID
-- `socialType`: 소셜 타입 (kakao, google)
+- `socialType`: 소셜 타입 (google)
+
+### Games (BGG 데이터)
+- `id`: 내부 게임 ID
+- `bggId`: BGG 게임 ID
+- `nameKo`, `nameEn`: 한국어/영문 이름
+- `yearPublished`: 출시 연도
+- `minPlayers`, `maxPlayers`, `bestPlayerCount`: 플레이어 수
+- `minPlaytime`, `maxPlaytime`: 플레이타임
+- `description`: 게임 설명
+- `imageUrl`, `thumbnailUrl`: 이미지
+- `bggRating`: BGG 평점
+- `meepleonRating`: 미플온 평점
+- `ratingCount`: 미플온 평가 수
+- `bggRankOverall`, `bggRankStrategy`: BGG 순위
+
+### GameRatings (미플온 평점)
+- `id`: 평가 ID
+- `userId`: 사용자 ID
+- `gameId`: 게임 ID
+- `rating`: 평점 (0-10)
+- `comment`: 평가 코멘트
 
 ### Listings
 - `id`: 매물 ID
 - `userId`: 판매자 ID
-- `gameName`: 게임명 (문자열)
+- `gameId`: 게임 ID (games 테이블 참조)
+- `gameName`: 게임명 (레거시 호환용)
 - `title`: 제목 (옵션)
 - `price`: 가격
 - `method`: 거래방식 (direct=직거래, delivery=택배)
 - `region`: 지역
 - `description`: 설명 (옵션)
-- `contactLink`: 연락 링크 (카톡 오픈채팅/전화/문자)
+- `contactLink`: 연락 링크
 - `status`: 상태 (selling=판매중, sold=판매완료)
-- `isHidden`: 관리자 숨김 플래그
 
-### ListingImages
-- `id`: 이미지 ID
-- `listingId`: 매물 ID
-- `url`: 이미지 URL
-- `orderIndex`: 순서 (0, 1, 2)
+## 🎯 v1 주요 기능
 
-## 🎯 v0 기능 범위
+### 새로 추가된 기능
+- ✅ 구글 소셜 로그인 (카카오 → 구글 전환)
+- ✅ BGG 게임 데이터 동기화 (XML API2)
+- ✅ 게임 상세 정보 조회 (BGG + 미플온 데이터 통합)
+- ✅ 미플온 평점 시스템 (등록, 수정, 삭제, 조회)
+- ✅ 게임 카테고리/메커니즘 매핑
+- ✅ 자동 동기화 스케줄러 (매일 새벽 3시 BGG Hot List)
+- ✅ Listing과 Game 연결 (gameBggId 지원)
 
-### 포함된 기능
+### 기존 기능 (v0)
 - ✅ 비로그인 열람 전체 허용
-- ✅ 카카오 소셜 로그인
 - ✅ 홈: 오늘의 매물 리스트
 - ✅ 중고거래: 리스트(필터, 정렬), 상세, 등록, 상태변경
 - ✅ 마이: 내 매물 목록 + 상태변경
 - ✅ 이미지 업로드 (최대 3장, URL 방식)
-
-### 제외된 기능 (v1로 이월)
-- ❌ 검색 (텍스트 검색)
-- ❌ 예약중 상태
-- ❌ 리뷰/평점
-- ❌ 미니샵
-- ❌ 프로필 커뮤니티
-- ❌ 푸시알림
-- ❌ 북마크/좋아요
-- ❌ 신고/운영툴
-- ❌ 포럼/콘텐츠 글쓰기
 
 ## 🛠 개발 도구
 
@@ -199,7 +229,9 @@ Authorization: Bearer <your_jwt_token>
 - **ts-node-dev**: 개발 시 hot reload
 - **MySQL2**: Promise 기반 MySQL 드라이버
 - **JWT**: 인증 토큰
-- **Axios**: HTTP 클라이언트 (카카오 API 호출)
+- **Axios**: HTTP 클라이언트 (구글 API, BGG API 호출)
+- **fast-xml-parser**: XML 파싱 (BGG API)
+- **node-cron**: 스케줄러 (자동 동기화)
 
 ## 🚂 Railway 배포 가이드
 
@@ -235,6 +267,7 @@ Railway 대시보드 → Variables 탭에서 설정:
   node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
   ```
 - `JWT_EXPIRES_IN=7d` (선택사항)
+- `GOOGLE_CLIENT_ID` - 구글 OAuth 클라이언트 ID
 
 ### 5. 데이터베이스 마이그레이션
 Railway MySQL 서비스의 "Connect" 탭에서 연결 정보 확인 후:
@@ -242,6 +275,7 @@ Railway MySQL 서비스의 "Connect" 탭에서 연결 정보 확인 후:
 ```bash
 # Railway MySQL에 연결하여 마이그레이션 실행
 mysql -h [MYSQL_HOST] -P [MYSQL_PORT] -u [MYSQL_USER] -p[MYSQL_PASSWORD] [MYSQL_DATABASE] < migrations/001_initial_schema.sql
+mysql -h [MYSQL_HOST] -P [MYSQL_PORT] -u [MYSQL_USER] -p[MYSQL_PASSWORD] [MYSQL_DATABASE] < migrations/002_add_game_tables.sql
 ```
 
 또는 Railway MySQL 서비스의 "Data" 탭에서 직접 SQL 실행 가능
@@ -255,14 +289,21 @@ mysql -h [MYSQL_HOST] -P [MYSQL_PORT] -u [MYSQL_USER] -p[MYSQL_PASSWORD] [MYSQL_
 
 1. **환경변수**: `.env` 파일은 절대 커밋하지 마세요
 2. **비밀번호**: 프로덕션에서는 강력한 JWT_SECRET 사용
-3. **이미지 업로드**: 현재는 URL을 받는 방식입니다. 실제 파일 업로드를 원하면 multer 등을 추가해야 합니다.
-4. **카카오 로그인**: 카카오 개발자 콘솔에서 앱을 등록하고 Redirect URI를 설정해야 합니다.
-5. **에러 처리**: 모든 에러는 적절한 HTTP 상태 코드와 함께 반환됩니다.
-6. **Railway MySQL**: Railway MySQL 서비스 추가 시 `MYSQL_*` 환경변수가 자동으로 설정됩니다. 코드는 Railway와 일반 환경변수 모두 지원합니다.
+3. **BGG API**: Rate limit이 있으므로 요청 간 딜레이(1초) 필요
+4. **게임 동기화**: 매일 새벽 3시 자동 동기화 (BGG Hot List)
+5. **중고거래 등록**: `gameBggId` 제공 시 자동으로 게임 정보 동기화
+6. **에러 처리**: 모든 에러는 적절한 HTTP 상태 코드와 함께 반환됩니다
+7. **Railway MySQL**: Railway MySQL 서비스 추가 시 `MYSQL_*` 환경변수가 자동으로 설정됩니다
 
 ## 📚 참고 자료
 
 - [Express.js 공식 문서](https://expressjs.com/)
 - [TypeScript 공식 문서](https://www.typescriptlang.org/)
 - [MySQL2 문서](https://github.com/sidorares/node-mysql2)
-- [카카오 로그인 REST API](https://developers.kakao.com/docs/latest/ko/kakaologin/rest-api)
+- [BoardGameGeek XML API2](https://boardgamegeek.com/wiki/page/BGG_XML_API2)
+- [Google OAuth 2.0](https://developers.google.com/identity/protocols/oauth2)
+
+## 🔄 마이그레이션 이력
+
+- `001_initial_schema.sql`: 초기 스키마 (Users, Listings, ListingImages)
+- `002_add_game_tables.sql`: 게임 관련 테이블 추가 (Games, GameCategories, GameMechanisms, GameRatings, GameReviews, 매핑 테이블)
