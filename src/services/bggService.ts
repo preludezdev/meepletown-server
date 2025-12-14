@@ -3,6 +3,17 @@ import { XMLParser } from 'fast-xml-parser';
 import { BggGameData } from '../models/Game';
 
 const BGG_API_BASE_URL = 'https://boardgamegeek.com/xmlapi2';
+
+// Axios 인스턴스 생성 (User-Agent 설정)
+const bggClient = axios.create({
+  baseURL: BGG_API_BASE_URL,
+  headers: {
+    'User-Agent': 'MeepleOn/1.0 (+https://meepleon.com; contact@meepleon.com)',
+    'Accept': 'application/xml',
+  },
+  timeout: 10000, // 10초 타임아웃
+});
+
 const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
@@ -17,12 +28,8 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export const fetchGameFromBGG = async (bggId: number): Promise<BggGameData | null> => {
   try {
     // BGG XML API2: thing?id={bggId}&type=boardgame&stats=1
-    const url = `${BGG_API_BASE_URL}/thing?id=${bggId}&type=boardgame&stats=1`;
-    const response = await axios.get(url, {
-      headers: {
-        'User-Agent': 'MeepleOn/1.0 (https://meepleon.com)',
-      },
-    });
+    const url = `/thing?id=${bggId}&type=boardgame&stats=1`;
+    const response = await bggClient.get(url);
 
     // XML 파싱
     const parsed = parser.parse(response.data);
@@ -153,12 +160,8 @@ export const fetchGamesFromBGG = async (bggIds: number[]): Promise<BggGameData[]
 // BGG 인기 게임 목록 가져오기 (Hot list)
 export const fetchHotGamesFromBGG = async (): Promise<number[]> => {
   try {
-    const url = `${BGG_API_BASE_URL}/hot?type=boardgame`;
-    const response = await axios.get(url, {
-      headers: {
-        'User-Agent': 'MeepleOn/1.0 (https://meepleon.com)',
-      },
-    });
+    const url = `/hot?type=boardgame`;
+    const response = await bggClient.get(url);
     const parsed = parser.parse(response.data);
 
     const items = parsed?.items?.item;
