@@ -1,15 +1,17 @@
 import axios from 'axios';
 import { XMLParser } from 'fast-xml-parser';
 import { BggGameData } from '../models/Game';
+import { env } from '../config/env';
 
 const BGG_API_BASE_URL = 'https://boardgamegeek.com/xmlapi2';
 
-// Axios 인스턴스 생성 (User-Agent 설정)
+// Axios 인스턴스 생성 (User-Agent + Authorization 설정)
 const bggClient = axios.create({
   baseURL: BGG_API_BASE_URL,
   headers: {
     'User-Agent': 'MeepleOn/1.0 (+https://meepleon.com; contact@meepleon.com)',
     'Accept': 'application/xml',
+    ...(env.bggApiToken && { 'Authorization': `Bearer ${env.bggApiToken}` }), // BGG 토큰 있으면 추가
   },
   timeout: 10000, // 10초 타임아웃
 });

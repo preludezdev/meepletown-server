@@ -18,6 +18,7 @@ export interface EnvConfig {
     secret: string;
     expiresIn: string;
   };
+  bggApiToken?: string; // BGG API Authorization 토큰
 }
 
 // 환경변수 검증 및 반환
@@ -65,6 +66,7 @@ export const getEnvConfig = (): EnvConfig => {
       secret: process.env.JWT_SECRET!,
       expiresIn: process.env.JWT_EXPIRES_IN || '7d',
     },
+    bggApiToken: process.env.BGG_API_TOKEN, // BGG API 토큰 (선택사항)
   };
 };
 
