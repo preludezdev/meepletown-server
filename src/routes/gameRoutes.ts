@@ -196,10 +196,8 @@ router.delete(
  * /api/v1/games/sync/{bggId}:
  *   post:
  *     summary: 게임 수동 동기화
- *     description: BGG에서 게임 정보를 가져와 DB에 저장/업데이트합니다.
+ *     description: BGG에서 게임 정보를 가져와 DB에 저장/업데이트합니다. (임시로 인증 제거됨)
  *     tags: [Games - Admin]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: bggId
@@ -210,16 +208,15 @@ router.delete(
  *       200:
  *         description: 동기화 성공
  */
-router.post('/sync/:bggId', authenticate, gameController.syncGame);
+router.post('/sync/:bggId', gameController.syncGame); // 임시로 authenticate 제거
 
 /**
  * @swagger
  * /api/v1/games/sync:
  *   post:
  *     summary: 여러 게임 일괄 동기화
+ *     description: 여러 게임을 한번에 동기화합니다. (임시로 인증 제거됨)
  *     tags: [Games - Admin]
- *     security:
- *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -240,10 +237,9 @@ router.post('/sync/:bggId', authenticate, gameController.syncGame);
  */
 router.post(
   '/sync',
-  authenticate,
   validateRequest(['bggIds']),
   gameController.syncGames
-);
+); // 임시로 authenticate 제거
 
 export default router;
 
