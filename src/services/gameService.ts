@@ -28,20 +28,42 @@ export const getGameDetail = async (
     bggId: game.bggId,
     nameKo: game.nameKo,
     nameEn: game.nameEn,
+    alternateNames: game.alternateNames ? JSON.parse(game.alternateNames) : null,
     yearPublished: game.yearPublished,
     minPlayers: game.minPlayers,
     maxPlayers: game.maxPlayers,
     bestPlayerCount: game.bestPlayerCount,
     minPlaytime: game.minPlaytime,
     maxPlaytime: game.maxPlaytime,
+    minAge: game.minAge,
     description: game.description,
     imageUrl: game.imageUrl,
     thumbnailUrl: game.thumbnailUrl,
+    
+    // 제작진 정보 (JSON 파싱)
+    designers: game.designers ? JSON.parse(game.designers) : null,
+    artists: game.artists ? JSON.parse(game.artists) : null,
+    publishers: game.publishers ? JSON.parse(game.publishers) : null,
+    
+    // 평점/통계
     bggRating: game.bggRating,
+    averageWeight: game.averageWeight,
     meepleonRating: game.meepleonRating,
     ratingCount: game.ratingCount,
+    usersRated: game.usersRated,
+    
+    // 커뮤니티 통계
+    owned: game.owned,
+    trading: game.trading,
+    wanting: game.wanting,
+    wishing: game.wishing,
+    numComments: game.numComments,
+    numWeights: game.numWeights,
+    
+    // 랭킹
     bggRankOverall: game.bggRankOverall,
     bggRankStrategy: game.bggRankStrategy,
+    
     categories,
     mechanisms,
     userRating,
