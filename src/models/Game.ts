@@ -16,6 +16,7 @@ export interface Game {
   maxPlaytime: number | null;
   minAge: number | null; // 권장 연령
   description: string | null;
+  descriptionKo: string | null; // 한국어 설명
   imageUrl: string | null;
   thumbnailUrl: string | null;
   
@@ -43,6 +44,10 @@ export interface Game {
   bggRankOverall: number | null;
   bggRankStrategy: number | null;
   
+  // 번역 관련
+  translatedAt: Date | null; // 번역 완료 시각
+  popularityScore: number; // 인기도 점수 (향후 자동화 시 사용)
+  
   lastSyncedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -63,6 +68,7 @@ export interface GameRow {
   maxPlaytime: number | null;
   minAge: number | null;
   description: string | null;
+  descriptionKo: string | null;
   imageUrl: string | null;
   thumbnailUrl: string | null;
   designers: string | null;
@@ -81,6 +87,8 @@ export interface GameRow {
   numWeights: number | null;
   bggRankOverall: number | null;
   bggRankStrategy: number | null;
+  translatedAt: Date | null;
+  popularityScore: number;
   lastSyncedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -101,6 +109,7 @@ export interface GameDetailResponse {
   maxPlaytime: number | null;
   minAge: number | null;
   description: string | null;
+  descriptionKo: string | null;
   imageUrl: string | null;
   thumbnailUrl: string | null;
   

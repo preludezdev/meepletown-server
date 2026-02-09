@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import * as gameService from '../services/gameService';
 import * as gameSyncService from '../services/gameSyncService';
+import * as translationBatchService from '../services/translationBatchService';
+import * as gameRepository from '../repositories/gameRepository';
 import { sendSuccess } from '../utils/response';
 
 // 게임 상세 조회
@@ -135,3 +137,96 @@ export const syncGames = async (
   }
 };
 
+// 단일 게임 번역 (수동 실행, 관리자용)
+export const translateGame = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const bggId = parseInt(req.params.bggId);
+
+    // BGG ID로 게임 찾기
+    const game = await gameRepository.findGameByBggId(bggId);
+    if (!game) {
+      return next(new Error('게임을 찾을 수 없습니다'));
+    }
+
+    // 게임 번역 실행
+    await translationBatchService.translateGame(game.id);
+
+    // 번역된 게임 다시 조회
+    const translatedGame = await gameRepository.findGameById(game.id);
+
+    sendSuccess(res, {
+      message: `게임 번역 완료: ${translatedGame?.nameKo || game.nameEn}`,
+      game: translatedGame,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 여러 게임 일괄 번역 (수동 실행, 관리자용)
+export const translateGames = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { gameIds } = req.body; // [1, 2, 3, ...]
+
+    if (!Array.isArray(gameIds)) {
+      return next(new Error('gameIds는 배열이어야 합니다'));
+    }
+
+    // 백그라운드 작업으로 실행
+    translationBatchService
+      .translateGames(gameIds)
+      .catch((error) => console.error('[일괄 번역 에러]', error));
+
+    sendSuccess(res, {
+      message: `${gameIds.length}개 게임 번역을 시작했습니다`,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 번역 대기열 조회
+export const getTranslationQueue = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 50;
+    const queue = await translationBatchService.getTranslationQueue(limit);
+
+    sendSuccess(res, {
+      total: queue.length,
+      queue,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 월별 번역 통계 조회
+export const getTranslationStats = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const yearMonth = req.query.yearMonth as string;
+    const stats = await translationBatchService.getMonthlyStats(yearMonth);
+
+    sendSuccess(res, stats || {
+      message: '번역 통계가 없습니다',
+      yearMonth: yearMonth || new Date().toISOString().slice(0, 7),
+    });
+  } catch (error) {
+    next(error);
+  }
+};

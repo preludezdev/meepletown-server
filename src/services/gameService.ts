@@ -37,6 +37,7 @@ export const getGameDetail = async (
     maxPlaytime: game.maxPlaytime,
     minAge: game.minAge,
     description: game.description,
+    descriptionKo: game.descriptionKo,
     imageUrl: game.imageUrl,
     thumbnailUrl: game.thumbnailUrl,
     

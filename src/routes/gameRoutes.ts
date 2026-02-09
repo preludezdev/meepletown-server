@@ -241,5 +241,125 @@ router.post(
   gameController.syncGames
 ); // 임시로 authenticate 제거
 
+/**
+ * @swagger
+ * /api/v1/games/{bggId}/translate:
+ *   post:
+ *     summary: 단일 게임 번역
+ *     description: 특정 게임의 제목과 설명을 Papago API로 번역합니다. (관리자용)
+ *     tags: [Games - Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: bggId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: 번역할 게임의 BGG ID
+ *     responses:
+ *       200:
+ *         description: 번역 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *       404:
+ *         description: 게임을 찾을 수 없음
+ */
+router.post('/:bggId/translate', authenticate, gameController.translateGame);
+
+/**
+ * @swagger
+ * /api/v1/games/translate-batch:
+ *   post:
+ *     summary: 여러 게임 일괄 번역
+ *     description: 여러 게임을 한번에 번역합니다. (관리자용)
+ *     tags: [Games - Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - gameIds
+ *             properties:
+ *               gameIds:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 description: 번역할 게임들의 내부 ID 배열
+ *                 example: [1, 2, 3, 4, 5]
+ *     responses:
+ *       200:
+ *         description: 번역 배치 시작
+ */
+router.post(
+  '/translate-batch',
+  authenticate,
+  validateRequest(['gameIds']),
+  gameController.translateGames
+);
+
+/**
+ * @swagger
+ * /api/v1/games/translation-queue:
+ *   get:
+ *     summary: 번역 대기열 조회
+ *     description: 번역되지 않은 게임 목록을 우선순위순으로 조회합니다.
+ *     tags: [Games - Admin]
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: 조회할 게임 수
+ *     responses:
+ *       200:
+ *         description: 대기열 조회 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ */
+router.get('/translation-queue', gameController.getTranslationQueue);
+
+/**
+ * @swagger
+ * /api/v1/games/translation-stats:
+ *   get:
+ *     summary: 월별 번역 통계 조회
+ *     description: 특정 월의 번역 문자 수, 게임 수, 예상 비용을 조회합니다.
+ *     tags: [Games - Admin]
+ *     parameters:
+ *       - in: query
+ *         name: yearMonth
+ *         schema:
+ *           type: string
+ *           pattern: '^\d{4}-\d{2}$'
+ *           example: '2026-02'
+ *         description: 조회할 연월 (YYYY-MM). 생략 시 현재 월
+ *     responses:
+ *       200:
+ *         description: 통계 조회 성공
+ */
+router.get('/translation-stats', gameController.getTranslationStats);
+
 export default router;
 

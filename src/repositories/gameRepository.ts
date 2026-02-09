@@ -240,3 +240,121 @@ export const deleteMechanismMappingsByGameId = async (gameId: number): Promise<v
   await pool.execute('DELETE FROM gameMechanismMappings WHERE gameId = ?', [gameId]);
 };
 
+// ============================
+// 번역 관련 함수들
+// ============================
+
+// 번역되지 않은 게임 조회 (BGG 랭킹 우선순위)
+export const findUntranslatedGames = async (limit: number = 10): Promise<Game[]> => {
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    `SELECT * FROM games 
+     WHERE (nameKo IS NULL OR nameKo = '' OR descriptionKo IS NULL OR descriptionKo = '')
+     ORDER BY bggRankOverall ASC, owned DESC, wishing DESC
+     LIMIT ?`,
+    [limit]
+  );
+  return rows as Game[];
+};
+
+// 인기도순 게임 조회 (번역 여부 무관)
+export const findGamesByPopularity = async (limit: number = 10): Promise<Game[]> => {
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    `SELECT * FROM games 
+     ORDER BY popularityScore DESC, owned DESC, wishing DESC, bggRankOverall ASC
+     LIMIT ?`,
+    [limit]
+  );
+  return rows as Game[];
+};
+
+// 게임 번역 정보 업데이트
+export const updateTranslation = async (
+  gameId: number,
+  nameKo?: string,
+  descriptionKo?: string
+): Promise<void> => {
+  const updates: string[] = [];
+  const values: any[] = [];
+
+  if (nameKo !== undefined) {
+    updates.push('nameKo = ?');
+    values.push(nameKo);
+  }
+
+  if (descriptionKo !== undefined) {
+    updates.push('descriptionKo = ?');
+    values.push(descriptionKo);
+  }
+
+  if (updates.length === 0) {
+    return; // 업데이트할 내용 없음
+  }
+
+  updates.push('translatedAt = NOW()');
+  values.push(gameId);
+
+  await pool.execute(
+    `UPDATE games SET ${updates.join(', ')} WHERE id = ?`,
+    values
+  );
+};
+
+// 게임 인기도 점수 계산 및 업데이트 (향후 자동화 시 사용)
+export const updatePopularityScore = async (gameId: number): Promise<void> => {
+  await pool.execute(
+    `UPDATE games 
+     SET popularityScore = (
+       (COALESCE(owned, 0) * 0.5) + 
+       (COALESCE(wishing, 0) * 1) + 
+       CASE 
+         WHEN bggRankOverall IS NOT NULL AND bggRankOverall > 0 
+         THEN (10000 - bggRankOverall)
+         ELSE 0
+       END
+     )
+     WHERE id = ?`,
+    [gameId]
+  );
+};
+
+// 모든 게임의 인기도 점수 재계산 (향후 자동화 시 사용)
+export const updateAllPopularityScores = async (): Promise<void> => {
+  await pool.execute(
+    `UPDATE games 
+     SET popularityScore = (
+       (COALESCE(owned, 0) * 0.5) + 
+       (COALESCE(wishing, 0) * 1) + 
+       CASE 
+         WHEN bggRankOverall IS NOT NULL AND bggRankOverall > 0 
+         THEN (10000 - bggRankOverall)
+         ELSE 0
+       END
+     )`
+  );
+};
+
+// 번역 통계 조회 (월별)
+export const getTranslationStats = async (yearMonth: string): Promise<any> => {
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    'SELECT * FROM translationStats WHERE yearMonth = ?',
+    [yearMonth]
+  );
+  return rows[0] || null;
+};
+
+// 번역 통계 업데이트 (월별)
+export const updateTranslationStats = async (
+  yearMonth: string,
+  characters: number,
+  gameCount: number = 1
+): Promise<void> => {
+  await pool.execute(
+    `INSERT INTO translationStats (yearMonth, totalCharacters, totalGames, cost)
+     VALUES (?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE 
+       totalCharacters = totalCharacters + VALUES(totalCharacters),
+       totalGames = totalGames + VALUES(totalGames),
+       cost = cost + VALUES(cost)`,
+    [yearMonth, characters, gameCount, characters * 0.002] // 대략 1자당 0.002원 가정
+  );
+};

@@ -19,6 +19,10 @@ export interface EnvConfig {
     expiresIn: string;
   };
   bggApiToken?: string; // BGG API Authorization 토큰
+  papago?: {
+    clientId: string;
+    clientSecret: string;
+  };
 }
 
 // 환경변수 검증 및 반환
@@ -67,6 +71,12 @@ export const getEnvConfig = (): EnvConfig => {
       expiresIn: process.env.JWT_EXPIRES_IN || '7d',
     },
     bggApiToken: process.env.BGG_API_TOKEN, // BGG API 토큰 (선택사항)
+    papago: process.env.PAPAGO_CLIENT_ID && process.env.PAPAGO_CLIENT_SECRET
+      ? {
+          clientId: process.env.PAPAGO_CLIENT_ID,
+          clientSecret: process.env.PAPAGO_CLIENT_SECRET,
+        }
+      : undefined,
   };
 };
 
