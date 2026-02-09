@@ -1,9 +1,6 @@
 import axios from 'axios';
 import { env } from '../config/env';
 
-// Papago Translation API (네이버 클라우드)
-const PAPAGO_API_URL = 'https://naveropenapi.apigw.ntruss.com/nmt/v1/translation';
-
 // 지원 언어 코드
 type LanguageCode = 'ko' | 'en' | 'ja' | 'zh-CN' | 'zh-TW' | 'es' | 'fr' | 'de' | 'ru';
 

@@ -66,7 +66,7 @@ export const translateGame = async (gameId: number): Promise<void> => {
   }
 
   // 3. DB 업데이트
-  await gameRepository.updateTranslation(gameId, nameKo, descriptionKo);
+  await gameRepository.updateTranslation(gameId, nameKo || undefined, descriptionKo || undefined);
 
   // 4. 번역 통계 업데이트
   const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
@@ -117,7 +117,6 @@ export const getTranslationQueue = async (limit: number = 50): Promise<any[]> =>
     nameKo: game.nameKo,
     hasDescriptionKo: !!game.descriptionKo,
     popularityScore: game.popularityScore,
-    viewCount: game.viewCount,
     owned: game.owned,
     wishing: game.wishing,
     bggRankOverall: game.bggRankOverall,
