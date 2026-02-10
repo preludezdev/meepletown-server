@@ -255,8 +255,7 @@ export const findUntranslatedGames = async (limit: number = 10): Promise<Game[]>
        COALESCE(bggRankOverall, 999999) ASC,
        COALESCE(owned, 0) DESC,
        COALESCE(wishing, 0) DESC
-     LIMIT ?`,
-    [safeLimit]
+     LIMIT ${safeLimit}`
   );
   return rows as Game[];
 };
