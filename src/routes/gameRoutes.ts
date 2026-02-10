@@ -296,10 +296,8 @@ router.post(
  * /api/v1/games/{bggId}/translate:
  *   post:
  *     summary: 단일 게임 번역
- *     description: 특정 게임의 제목과 설명을 Papago API로 번역합니다. (관리자용)
+ *     description: 특정 게임의 설명을 Papago API로 번역합니다. (관리자용, 인증 불필요)
  *     tags: [Games - Admin]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: bggId
@@ -324,17 +322,15 @@ router.post(
  *       404:
  *         description: 게임을 찾을 수 없음
  */
-router.post('/:bggId/translate', authenticate, gameController.translateGame);
+router.post('/:bggId/translate', gameController.translateGame); // 인증 제거 (관리자 수동 번역)
 
 /**
  * @swagger
  * /api/v1/games/translate-batch:
  *   post:
  *     summary: 여러 게임 일괄 번역
- *     description: 여러 게임을 한번에 번역합니다. (관리자용)
+ *     description: 여러 게임을 한번에 번역합니다. (관리자용, 인증 불필요)
  *     tags: [Games - Admin]
- *     security:
- *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -356,10 +352,9 @@ router.post('/:bggId/translate', authenticate, gameController.translateGame);
  */
 router.post(
   '/translate-batch',
-  authenticate,
   validateRequest(['gameIds']),
   gameController.translateGames
-);
+); // 인증 제거 (관리자 수동 번역)
 
 export default router;
 
