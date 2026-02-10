@@ -64,14 +64,18 @@ export const translateText = async (
       characterCount: text.length,
     };
   } catch (error: any) {
+    if (error.response?.status === 403) {
+      const errorMsg = error.response?.data?.errorMessage || error.response?.data?.message || '인증 실패';
+      throw new Error(`Papago API 인증 실패 (403): ${errorMsg}. Railway 환경 변수 PAPAGO_CLIENT_ID, PAPAGO_CLIENT_SECRET을 확인하세요.`);
+    }
     if (error.response?.status === 429) {
       throw new Error('Papago API 요청 한도를 초과했습니다');
     }
     if (error.response?.status === 400) {
       throw new Error('잘못된 번역 요청입니다');
     }
-    console.error('Papago 번역 에러:', error.message);
-    throw new Error(`번역 실패: ${error.message}`);
+    console.error('Papago 번역 에러:', error.response?.data || error.message);
+    throw new Error(`번역 실패: ${error.response?.data?.errorMessage || error.message}`);
   }
 };
 
