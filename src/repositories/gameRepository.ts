@@ -347,18 +347,28 @@ export const getTranslationStats = async (yearMonth: string): Promise<any> => {
 };
 
 // 번역 통계 업데이트 (월별)
+// Papago Text Translation API 가격: 1,000,000자당 20,000원 (VAT 별도)
+// 과금은 1,000,000자 단위로 올림 계산
 export const updateTranslationStats = async (
   yearMonth: string,
   characters: number,
   gameCount: number = 1
 ): Promise<void> => {
+  // 기존 통계 조회
+  const existingStats = await getTranslationStats(yearMonth);
+  const newTotalCharacters = (existingStats?.totalCharacters || 0) + characters;
+  
+  // 1,000,000자 단위로 올림하여 과금 단위 계산
+  const billingUnits = Math.ceil(newTotalCharacters / 1000000);
+  const cost = billingUnits * 20000; // 1,000,000자당 20,000원
+  
   await pool.execute(
     `INSERT INTO translationStats (yearMonth, totalCharacters, totalGames, cost)
      VALUES (?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE 
        totalCharacters = totalCharacters + VALUES(totalCharacters),
        totalGames = totalGames + VALUES(totalGames),
-       cost = cost + VALUES(cost)`,
-    [yearMonth, characters, gameCount, characters * 0.002] // 대략 1자당 0.002원 가정
+       cost = ?`,
+    [yearMonth, characters, gameCount, cost, cost]
   );
 };

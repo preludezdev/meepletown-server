@@ -7,38 +7,29 @@ const router = Router();
 
 /**
  * @swagger
- * /api/v1/auth/google-url:
- *   get:
- *     summary: Google OAuth 테스트 가이드 (Swagger용)
- *     description: Swagger에서 Google 로그인을 테스트하기 위한 가이드를 제공합니다. Google OAuth Playground를 사용하여 accessToken을 받아올 수 있습니다.
+ * /api/v1/auth/google:
+ *   post:
+ *     summary: Google 로그인
+ *     description: Google OAuth accessToken으로 로그인하여 JWT를 발급받습니다. 클라이언트에서 Google 로그인 후 받은 accessToken을 전달하세요.
  *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - accessToken
+ *             properties:
+ *               accessToken:
+ *                 type: string
+ *                 description: Google OAuth에서 발급받은 access_token
  *     responses:
  *       200:
- *         description: 가이드 정보 반환
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: object
- *                   properties:
- *                     authUrl:
- *                       type: string
- *                       description: Google OAuth Playground URL
- *                     instructions:
- *                       type: string
- *                       description: 상세 사용 방법 안내
- *                     scopes:
- *                       type: array
- *                       items:
- *                         type: string
- *                       description: 필요한 OAuth 스코프 목록
+ *         description: 로그인 성공, JWT 토큰 반환
+ *       400:
+ *         description: accessToken 필요
  */
-router.get('/google-url', authController.getGoogleAuthUrl);
-
 // 구글 로그인
 router.post(
   '/google',
@@ -46,7 +37,21 @@ router.post(
   authController.googleLogin
 );
 
-// 현재 사용자 정보 조회 (인증 필요)
+/**
+ * @swagger
+ * /api/v1/auth/me:
+ *   get:
+ *     summary: 현재 사용자 정보 조회
+ *     description: 로그인한 사용자 정보를 조회합니다.
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 사용자 정보
+ *       401:
+ *         description: 인증 필요
+ */
 router.get('/me', authenticate, authController.getCurrentUser);
 
 export default router;
