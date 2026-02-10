@@ -12,7 +12,7 @@ interface TranslationResult {
 
 // Papago API 클라이언트
 const papagoClient = axios.create({
-  baseURL: 'https://naveropenapi.apigw.ntruss.com',
+  baseURL: 'https://papago.apigw.ntruss.com',
   timeout: 30000, // 30초 타임아웃
 });
 
