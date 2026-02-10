@@ -245,10 +245,11 @@ export const deleteMechanismMappingsByGameId = async (gameId: number): Promise<v
 // ============================
 
 // 번역되지 않은 게임 조회 (BGG 랭킹 우선순위)
+// descriptionKo만 번역 대상 (nameKo는 BGG alternateNames에서 가져옴)
 export const findUntranslatedGames = async (limit: number = 10): Promise<Game[]> => {
   const [rows] = await pool.execute<RowDataPacket[]>(
     `SELECT * FROM games 
-     WHERE (nameKo IS NULL OR nameKo = '' OR descriptionKo IS NULL OR descriptionKo = '')
+     WHERE (descriptionKo IS NULL OR descriptionKo = '')
      ORDER BY bggRankOverall ASC, owned DESC, wishing DESC
      LIMIT ?`,
     [limit]

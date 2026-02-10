@@ -47,17 +47,9 @@ export const translateGame = async (gameId: number): Promise<void> => {
   console.log(`[게임 번역] 시작: ${game.nameEn} (ID: ${gameId})`);
 
   let totalCharacters = 0;
-  let nameKo = game.nameKo;
   let descriptionKo = game.descriptionKo;
 
-  // 1. 제목 번역 (아직 번역 안된 경우)
-  if (!nameKo && game.nameEn) {
-    console.log(`[게임 번역] 제목 번역 중: ${game.nameEn}`);
-    nameKo = await papagoService.translateGameName(game.nameEn);
-    totalCharacters += game.nameEn.length;
-  }
-
-  // 2. 설명 번역 (아직 번역 안된 경우)
+  // 설명 번역 (아직 번역 안된 경우만)
   if (!descriptionKo && game.description) {
     console.log(`[게임 번역] 설명 번역 중 (${game.description.length}자)`);
     const result = await papagoService.translateGameDescription(game.description);
@@ -65,14 +57,14 @@ export const translateGame = async (gameId: number): Promise<void> => {
     totalCharacters += result.characterCount;
   }
 
-  // 3. DB 업데이트
-  await gameRepository.updateTranslation(gameId, nameKo || undefined, descriptionKo || undefined);
+  // DB 업데이트 (descriptionKo만)
+  await gameRepository.updateTranslation(gameId, undefined, descriptionKo || undefined);
 
   // 4. 번역 통계 업데이트
   const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
   await gameRepository.updateTranslationStats(currentMonth, totalCharacters, 1);
 
-  console.log(`[게임 번역] 완료: ${nameKo} (총 ${totalCharacters}자)`);
+  console.log(`[게임 번역] 완료: ${game.nameEn} (총 ${totalCharacters}자)`);
 };
 
 // 여러 게임 일괄 번역
