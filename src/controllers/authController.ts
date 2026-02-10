@@ -25,7 +25,7 @@ export const googleLogin = async (
 
 // Google OAuth URL 생성 (Swagger 테스트용)
 export const getGoogleAuthUrl = async (
-  req: Request,
+  _req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
