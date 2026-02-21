@@ -641,10 +641,29 @@
       <div class="section">
         <div class="section-header"><h2>Sync &amp; Translate 실행</h2></div>
         <div class="form-body">
-          <div class="form-row">
-            <label>BGG ID 목록 (쉼표 또는 줄바꿈 구분)</label>
-            <textarea id="bggIdsInput" rows="3">224517, 342942, 161936, 174430, 316554, 233078, 397598, 115746, 167791, 187645</textarea>
+
+          <!-- 모드 탭 -->
+          <div class="filter-tabs" style="align-self:flex-start">
+            <button class="filter-tab active" id="modeTabManual" onclick="setSyncMode('manual')">직접 지정</button>
+            <button class="filter-tab" id="modeTabAll" onclick="setSyncMode('all')">전체 랭킹 (Top 3000)</button>
           </div>
+
+          <!-- 직접 지정 모드 -->
+          <div id="syncModeManual">
+            <div class="form-row">
+              <label>BGG ID 목록 (쉼표 또는 줄바꿈 구분)</label>
+              <textarea id="bggIdsInput" rows="3">224517, 342942, 161936, 174430, 316554, 233078, 397598, 115746, 167791, 187645</textarea>
+            </div>
+          </div>
+
+          <!-- 전체 랭킹 모드 -->
+          <div id="syncModeAll" style="display:none">
+            <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px 14px;font-size:13px;color:var(--text-muted);line-height:1.7">
+              CSV 기준 BGG 랭킹 <strong style="color:var(--text)">1~3000위</strong> 전체를 순서대로 처리합니다.<br>
+              이미 번역된 게임은 자동 스킵되며, 글자 수 한도 초과 시 자동 중단됩니다.
+            </div>
+          </div>
+
           <div class="form-row">
             <label>글자 수 한도 (charLimit)</label>
             <input type="number" id="charLimitInput" value="900000" min="1000" />
@@ -837,12 +856,33 @@
     }
   }
 
+  /* ── Sync mode toggle ── */
+  let syncMode = 'manual';
+
+  function setSyncMode(mode) {
+    syncMode = mode;
+    document.getElementById('syncModeManual').style.display = mode === 'manual' ? '' : 'none';
+    document.getElementById('syncModeAll').style.display    = mode === 'all'    ? '' : 'none';
+    document.getElementById('modeTabManual').classList.toggle('active', mode === 'manual');
+    document.getElementById('modeTabAll').classList.toggle('active', mode === 'all');
+    // 전체 랭킹 모드 기본 한도는 넉넉하게
+    if (mode === 'all') document.getElementById('charLimitInput').value = '4000000';
+    if (mode === 'manual') document.getElementById('charLimitInput').value = '900000';
+  }
+
   async function runSyncTranslate() {
-    const rawIds = document.getElementById('bggIdsInput').value;
-    const bggIds = rawIds.split(/[\s,]+/).map(s => parseInt(s.trim(),10)).filter(n => !isNaN(n));
-    if (!bggIds.length) { showToast('BGG ID를 입력해주세요'); return; }
-    const charLimit = parseInt(document.getElementById('charLimitInput').value,10) || 900000;
+    const charLimit = parseInt(document.getElementById('charLimitInput').value, 10) || 900000;
     const dryRun    = document.getElementById('dryRunCheck').checked;
+
+    let body = { charLimit, dryRun };
+
+    if (syncMode === 'manual') {
+      const rawIds = document.getElementById('bggIdsInput').value;
+      const bggIds = rawIds.split(/[\s,]+/).map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+      if (!bggIds.length) { showToast('BGG ID를 입력해주세요'); return; }
+      body.bggIds = bggIds;
+    }
+    // 전체 랭킹 모드: bggIds 미포함 → 서버가 CSV Top 3000 자동 사용
 
     const btn = document.getElementById('runBtn');
     btn.disabled = true;
@@ -855,7 +895,7 @@
     try {
       const data   = await apiFetch('/api/v1/games/sync-and-translate', {
         method: 'POST',
-        body: JSON.stringify({ bggIds, charLimit, dryRun }),
+        body: JSON.stringify(body),
       });
       const result = data.data || data;
       box.textContent = JSON.stringify(result, null, 2);
