@@ -410,6 +410,143 @@
       z-index: 999;
     }
     #toast.show { opacity: 1; transform: none; }
+
+    /* ── Game Detail Drawer ── */
+    .drawer-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 100;
+    }
+    .drawer-overlay.open { display: block; }
+
+    .drawer {
+      position: fixed;
+      top: 0; right: 0;
+      width: 520px;
+      max-width: 95vw;
+      height: 100vh;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 101;
+      transform: translateX(100%);
+      transition: transform 0.25s ease;
+    }
+    .drawer.open { transform: translateX(0); }
+
+    .drawer-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .drawer-header h3 { font-size: 15px; font-weight: 700; flex: 1; min-width: 0; }
+    .drawer-close {
+      background: none; border: none;
+      color: var(--text-muted);
+      font-size: 20px; line-height: 1;
+      padding: 4px 8px; cursor: pointer;
+      border-radius: 4px;
+    }
+    .drawer-close:hover { background: var(--surface2); color: var(--text); }
+
+    .drawer-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .drawer-hero {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .drawer-hero img {
+      width: 100px;
+      height: 100px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: var(--surface2);
+      flex-shrink: 0;
+    }
+    .drawer-hero-info { flex: 1; min-width: 0; }
+    .drawer-hero-info .en { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
+    .drawer-hero-info .ko { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
+
+    .meta-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px 9px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .chip span { color: var(--text); font-weight: 600; }
+
+    .detail-section { display: flex; flex-direction: column; gap: 8px; }
+    .detail-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .detail-section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .desc-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px;
+      font-size: 13px;
+      line-height: 1.75;
+      color: var(--text-muted);
+      max-height: 220px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .desc-box.translated { color: var(--text); border-color: rgba(108,99,255,0.3); }
+    .desc-box.empty-desc {
+      color: var(--red);
+      font-style: italic;
+      font-size: 12px;
+    }
+
+    .drawer-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px;
+      color: var(--text-muted);
+      font-size: 13px;
+      gap: 10px;
+    }
+
+    /* 클릭 가능한 행 */
+    #gamesBody tr { cursor: pointer; }
   </style>
 </head>
 <body>
@@ -584,6 +721,18 @@
 </div>
 
 <div id="toast"></div>
+
+<!-- ── Game Detail Drawer ── -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="gameDrawer">
+  <div class="drawer-header">
+    <h3 id="drawerTitle">게임 상세</h3>
+    <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="drawer-body" id="drawerBody">
+    <div class="drawer-loading">불러오는 중...</div>
+  </div>
+</div>
 
 <script>
   const BASE = '';
@@ -797,7 +946,7 @@
           : `<div class="thumb"></div>`;
         const nameKo = g.nameKo ? `<div class="game-name-ko">${g.nameKo}</div>` : '';
         return `
-          <tr>
+          <tr onclick="openGameDetail(${g.bggId})" title="클릭하면 상세보기">
             <td style="color:var(--text-muted);font-size:12px">${g.bggRankOverall ?? '—'}</td>
             <td>
               <div class="game-name-cell">
@@ -829,6 +978,105 @@
     document.getElementById('pageDisplay').textContent = `${page} / ${maxPage}`;
     document.getElementById('prevBtn').disabled = page <= 1;
     document.getElementById('nextBtn').disabled = page >= maxPage;
+  }
+
+  /* ══════════════════════════════
+     GAME DETAIL DRAWER
+  ══════════════════════════════ */
+  function openDrawer() {
+    document.getElementById('drawerOverlay').classList.add('open');
+    document.getElementById('gameDrawer').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeDrawer() {
+    document.getElementById('drawerOverlay').classList.remove('open');
+    document.getElementById('gameDrawer').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  // ESC 키로 닫기
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+
+  async function openGameDetail(bggId) {
+    document.getElementById('drawerTitle').textContent = '불러오는 중...';
+    document.getElementById('drawerBody').innerHTML = '<div class="drawer-loading"><span class="spinner" style="border-top-color:var(--accent)"></span> 불러오는 중...</div>';
+    openDrawer();
+
+    try {
+      // 게임 상세 API는 public (어드민 키 불필요)이지만 헤더 포함해도 무방
+      const res  = await fetch(`/api/v1/games/${bggId}`, { headers: adminHeaders() });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const g    = data.data || data;
+
+      document.getElementById('drawerTitle').textContent = g.nameEn || `BGG #${bggId}`;
+      renderDrawer(g);
+    } catch(e) {
+      document.getElementById('drawerBody').innerHTML =
+        `<div class="drawer-loading" style="color:var(--red)">오류: ${e.message}</div>`;
+    }
+  }
+
+  function esc(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  function renderDrawer(g) {
+    const translated = g.descriptionKo && g.descriptionKo.trim().length > 0;
+    const img = g.imageUrl || g.thumbnailUrl;
+
+    const players = (g.minPlayers && g.maxPlayers)
+      ? (g.minPlayers === g.maxPlayers ? `${g.minPlayers}인` : `${g.minPlayers}–${g.maxPlayers}인`)
+      : null;
+    const playtime = (g.minPlaytime && g.maxPlaytime)
+      ? (g.minPlaytime === g.maxPlaytime ? `${g.minPlaytime}분` : `${g.minPlaytime}–${g.maxPlaytime}분`)
+      : (g.minPlaytime ? `${g.minPlaytime}분+` : null);
+
+    const chips = [
+      g.bggRankOverall  ? `<div class="chip">BGG 랭크 <span>#${g.bggRankOverall}</span></div>` : '',
+      g.bggRating       ? `<div class="chip">BGG 평점 <span>${Number(g.bggRating).toFixed(2)}</span></div>` : '',
+      g.averageWeight   ? `<div class="chip">무게 <span>${Number(g.averageWeight).toFixed(1)}</span></div>` : '',
+      players           ? `<div class="chip">인원 <span>${players}</span></div>` : '',
+      playtime          ? `<div class="chip">시간 <span>${playtime}</span></div>` : '',
+      g.yearPublished   ? `<div class="chip">출시 <span>${g.yearPublished}</span></div>` : '',
+      g.bggId           ? `<div class="chip">BGG ID <span>${g.bggId}</span></div>` : '',
+    ].filter(Boolean).join('');
+
+    const descKoBlock = translated
+      ? `<div class="desc-box translated">${esc(g.descriptionKo)}</div>`
+      : `<div class="desc-box empty-desc">번역 내용 없음 (미번역 상태)</div>`;
+
+    const descEnBlock = g.description
+      ? `<div class="desc-box">${esc(g.description)}</div>`
+      : `<div class="desc-box empty-desc">원문 설명 없음</div>`;
+
+    document.getElementById('drawerBody').innerHTML = `
+      <div class="drawer-hero">
+        ${img ? `<img src="${esc(img)}" alt="" onerror="this.style.display='none'">` : ''}
+        <div class="drawer-hero-info">
+          <div class="en">${esc(g.nameEn)}</div>
+          <div class="ko">${esc(g.nameKo) || '<span style="color:var(--border)">한국어 이름 없음</span>'}</div>
+          <span class="pill ${translated ? 'yes' : 'no'}" style="font-size:12px">
+            ${translated ? '번역 완료' : '미번역'}
+          </span>
+          <div class="meta-chips">${chips}</div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-title">한국어 번역 (descriptionKo)</div>
+        ${descKoBlock}
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-title">원문 설명 (description)</div>
+        ${descEnBlock}
+      </div>
+    `;
   }
 
   /* ── Init ── */
