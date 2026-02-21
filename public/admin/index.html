@@ -620,7 +620,10 @@
   <!-- ── Sidebar ── -->
   <aside>
     <div class="nav-item active" data-panel="dashboard" onclick="switchPanel('dashboard', this)">
-      <span class="nav-icon">⚡</span> Dashboard
+      <span class="nav-icon">⚡</span> 대시보드
+    </div>
+    <div class="nav-item" data-panel="translation" onclick="switchPanel('translation', this)">
+      <span class="nav-icon">🌐</span> 게임 번역
     </div>
     <div class="nav-item" data-panel="games" onclick="switchPanel('games', this)">
       <span class="nav-icon">🎲</span> 게임 목록
@@ -636,40 +639,51 @@
     <!-- ════ DASHBOARD PANEL ════ -->
     <div class="panel active" id="panel-dashboard">
 
-      <!-- Stats cards -->
+      <!-- 서비스 현황 카드 -->
       <div class="stats-grid">
+        <div class="stat-card">
+          <div class="label">동기화된 게임 수</div>
+          <div class="value" id="statTotalGames">—</div>
+          <div class="sub">DB 등록 게임</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">번역된 게임 수</div>
+          <div class="value" id="statTranslatedGames">—</div>
+          <div class="sub">한국어 설명 보유</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">유저 수</div>
+          <div class="value" id="statTotalUsers">—</div>
+          <div class="sub">가입 회원</div>
+        </div>
+        <div class="stat-card" style="opacity:0.5">
+          <div class="label">포럼 게시글 수</div>
+          <div class="value">—</div>
+          <div class="sub">준비중</div>
+        </div>
+        <div class="stat-card" style="opacity:0.5">
+          <div class="label">자유 게시판 글 수</div>
+          <div class="value">—</div>
+          <div class="sub">준비중</div>
+        </div>
+      </div>
+
+    </div><!-- /panel-dashboard -->
+
+    <!-- ════ TRANSLATION PANEL ════ -->
+    <div class="panel" id="panel-translation">
+
+      <!-- 번역 현황 카드 -->
+      <div class="stats-grid" style="grid-template-columns:repeat(2,1fr)">
         <div class="stat-card">
           <div class="label">이번 달 번역 글자 수</div>
           <div class="value" id="statChars">—</div>
           <div class="sub" id="statMonth">—</div>
         </div>
         <div class="stat-card">
-          <div class="label">번역된 게임 수</div>
+          <div class="label">이번 달 번역된 게임</div>
           <div class="value" id="statGames">—</div>
           <div class="sub">이번 달</div>
-        </div>
-        <div class="stat-card">
-          <div class="label">잔여 예산</div>
-          <div class="value" id="statRemain">—</div>
-          <div class="sub" id="statLimit">한도 900,000자</div>
-        </div>
-        <div class="stat-card">
-          <div class="label">예상 비용 (KRW)</div>
-          <div class="value" id="statCost">—</div>
-          <div class="sub">Papago 기준</div>
-        </div>
-      </div>
-
-      <!-- Budget bar -->
-      <div class="section">
-        <div class="section-header">
-          <h2>월간 번역 예산 사용률</h2>
-          <span id="budgetPct" style="font-size:12px;color:var(--text-muted)">—</span>
-        </div>
-        <div style="padding:14px 18px">
-          <div class="progress-bar">
-            <div class="progress-fill" id="budgetBar" style="width:0%"></div>
-          </div>
         </div>
       </div>
 
@@ -718,13 +732,13 @@
               CSV 기준 BGG 랭킹 범위를 지정하여 처리합니다.<br>
               이미 번역된 게임은 자동 스킵되며, 글자 수 한도 초과 시 자동 중단됩니다.
             </div>
-            <div style="display:flex;gap:12px;align-items:flex-end">
-              <div class="form-row" style="flex:1;margin-bottom:0">
+            <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+              <div class="form-row" style="flex:1;min-width:120px;margin-bottom:0">
                 <label>시작 랭크</label>
                 <input type="number" id="startRankInput" value="1" min="1" max="3000" placeholder="예: 501" />
               </div>
               <div style="padding-bottom:8px;color:var(--text-muted);font-size:18px">~</div>
-              <div class="form-row" style="flex:1;margin-bottom:0">
+              <div class="form-row" style="flex:1;min-width:120px;margin-bottom:0">
                 <label>끝 랭크</label>
                 <input type="number" id="endRankInput" value="500" min="1" max="3000" placeholder="예: 1000" />
               </div>
@@ -752,7 +766,7 @@
         </div>
       </div>
 
-    </div><!-- /panel-dashboard -->
+    </div><!-- /panel-translation -->
 
     <!-- ════ GAMES PANEL ════ -->
     <div class="panel" id="panel-games">
@@ -924,6 +938,9 @@
       gamesState.firstLoad = false;
       loadGames(1);
     }
+    if (name === 'translation') {
+      loadTranslationStats();
+    }
   }
 
   /* ── Helpers ── */
@@ -943,23 +960,24 @@
   ══════════════════════════════ */
   async function loadDashboard() {
     try {
+      const data = await apiFetch('/api/v1/admin/stats');
+      const s = data.data || data;
+      document.getElementById('statTotalGames').textContent      = fmt(s.totalGames);
+      document.getElementById('statTranslatedGames').textContent = fmt(s.translatedGames);
+      document.getElementById('statTotalUsers').textContent      = fmt(s.totalUsers);
+    } catch (e) { showToast(e.message); }
+  }
+
+  /* ══════════════════════════════
+     TRANSLATION STATS
+  ══════════════════════════════ */
+  async function loadTranslationStats() {
+    try {
       const data = await apiFetch('/api/v1/games/translation-stats');
       const s = data.data || data;
-      document.getElementById('statChars').textContent   = fmt(s.totalChars ?? s.totalCharacters);
-      document.getElementById('statGames').textContent   = fmt(s.gamesTranslated ?? s.totalGames);
-      document.getElementById('statMonth').textContent   = s.yearMonth || '—';
-      document.getElementById('statRemain').textContent  = fmt(s.remainingBudget);
-      document.getElementById('statCost').textContent    =
-        s.estimatedCostKrw != null ? '₩' + fmt(Math.round(s.estimatedCostKrw)) :
-        s.cost != null ? '₩' + fmt(s.cost) : '—';
-
-      const limit = s.charLimit || 900000;
-      const used  = s.totalChars ?? s.totalCharacters ?? 0;
-      const pct   = Math.min(100, Math.round((used / limit) * 100));
-      document.getElementById('budgetBar').style.width    = pct + '%';
-      document.getElementById('budgetPct').textContent    = pct + '%';
-      document.getElementById('budgetBar').style.background =
-        pct >= 90 ? 'var(--red)' : pct >= 70 ? 'var(--yellow)' : 'var(--accent)';
+      document.getElementById('statChars').textContent = fmt(s.totalChars ?? s.totalCharacters);
+      document.getElementById('statGames').textContent = fmt(s.gamesTranslated ?? s.totalGames);
+      document.getElementById('statMonth').textContent = s.yearMonth || '—';
     } catch (e) { showToast(e.message); }
   }
 

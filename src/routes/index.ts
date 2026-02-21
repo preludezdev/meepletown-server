@@ -4,6 +4,7 @@ import userRoutes from './userRoutes';
 import listingRoutes from './listingRoutes';
 import homeRoutes from './homeRoutes';
 import gameRoutes from './gameRoutes';
+import adminRoutes from './adminRoutes';
 
 const router = Router();
 
@@ -13,5 +14,6 @@ router.use('/users', userRoutes);
 router.use('/listings', listingRoutes);
 router.use('/home', homeRoutes);
 router.use('/games', gameRoutes);
+router.use('/admin', adminRoutes);
 
 export default router;
