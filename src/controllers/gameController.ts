@@ -3,7 +3,7 @@ import * as gameService from '../services/gameService';
 import * as gameSyncService from '../services/gameSyncService';
 import * as translationBatchService from '../services/translationBatchService';
 import * as gameRepository from '../repositories/gameRepository';
-import { BGG_TOP_RANKED_IDS } from '../data/bggTopRankedIds';
+import { loadTopRankedGamesFromCsv } from '../data/bggTopRankedIds';
 import { sendSuccess } from '../utils/response';
 
 // 게임 상세 조회
@@ -272,11 +272,15 @@ export const getTopRankedStatus = async (
   next: NextFunction
 ): Promise<void> => {
   try {
+    const rankedGames = await loadTopRankedGamesFromCsv(1200);
+
     const statusList = await Promise.all(
-      BGG_TOP_RANKED_IDS.map(async (bggId) => {
+      rankedGames.map(async ({ bggId, name, rank }) => {
         const game = await gameRepository.findGameByBggId(bggId);
         return {
           bggId,
+          csvRank: rank,
+          csvName: name,
           inDb: !!game,
           nameEn: game?.nameEn ?? null,
           nameKo: game?.nameKo ?? null,
@@ -293,7 +297,7 @@ export const getTopRankedStatus = async (
 
     sendSuccess(res, {
       summary: {
-        total: BGG_TOP_RANKED_IDS.length,
+        total: rankedGames.length,
         inDb,
         notInDb,
         translated,

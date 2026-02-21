@@ -1,7 +1,7 @@
 import * as gameRepository from '../repositories/gameRepository';
 import * as gameSyncService from './gameSyncService';
 import * as papagoService from './papagoService';
-import { BGG_TOP_RANKED_IDS } from '../data/bggTopRankedIds';
+import { loadTopRankedIdsFromCsv } from '../data/bggTopRankedIds';
 
 // 번역 배치 작업 실행 (일일 자동 실행)
 export const runTranslationBatch = async (dailyLimit: number = 2): Promise<void> => {
@@ -128,7 +128,7 @@ export const getMonthlyStats = async (yearMonth?: string): Promise<any> => {
 // - 이미 번역된 게임은 스킵 (descriptionKo가 있으면 패스)
 // - 누적 글자 수가 월 한도(90% = 900,000자)를 초과하면 중단
 export const syncAndTranslateBatch = async (options?: {
-  bggIds?: number[];       // 직접 지정 시 이 목록 사용, 없으면 BGG_TOP_RANKED_IDS 사용
+  bggIds?: number[];       // 직접 지정 시 이 목록 사용, 없으면 CSV에서 상위 1200개 로드
   charLimit?: number;      // 이번 배치의 최대 글자 수 (기본: 남은 월 한도)
   dryRun?: boolean;        // true면 실제 번역 없이 계획만 반환
 }): Promise<{
@@ -155,7 +155,7 @@ export const syncAndTranslateBatch = async (options?: {
   const monthlyBudget = options?.charLimit ?? MONTHLY_SAFE_LIMIT;
   let remainingBudget = Math.max(0, monthlyBudget - alreadyUsed);
 
-  const targetIds = options?.bggIds ?? BGG_TOP_RANKED_IDS;
+  const targetIds = options?.bggIds ?? await loadTopRankedIdsFromCsv(1200);
   const dryRun = options?.dryRun ?? false;
 
   console.log(`[동기화+번역 배치] 시작: ${targetIds.length}개 게임 대상`);
