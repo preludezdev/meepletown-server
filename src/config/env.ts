@@ -19,6 +19,7 @@ export interface EnvConfig {
     expiresIn: string;
   };
   bggApiToken?: string; // BGG API Authorization 토큰
+  adminSecret?: string; // 어드민 API 접근용 시크릿 키
   papago?: {
     clientId: string;
     clientSecret: string;
@@ -70,7 +71,8 @@ export const getEnvConfig = (): EnvConfig => {
       secret: process.env.JWT_SECRET!,
       expiresIn: process.env.JWT_EXPIRES_IN || '7d',
     },
-    bggApiToken: process.env.BGG_API_TOKEN, // BGG API 토큰 (선택사항)
+    bggApiToken: process.env.BGG_API_TOKEN,
+    adminSecret: process.env.ADMIN_SECRET,
     papago: process.env.PAPAGO_CLIENT_ID && process.env.PAPAGO_CLIENT_SECRET
       ? {
           clientId: process.env.PAPAGO_CLIENT_ID,

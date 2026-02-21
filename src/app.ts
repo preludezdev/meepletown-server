@@ -1,5 +1,6 @@
 import express, { Application } from 'express';
 import cors from 'cors';
+import path from 'path';
 import swaggerUi from 'swagger-ui-express';
 import routes from './routes';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
@@ -18,6 +19,11 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'MeepleOn API Docs',
 }));
+
+// 어드민 페이지 정적 파일 서빙 (public/ 디렉토리는 프로젝트 루트에 위치)
+// 개발: __dirname = src/ → ../public/admin = <root>/public/admin
+// 프로덕션: __dirname = dist/ → ../public/admin = <root>/public/admin
+app.use('/admin', express.static(path.join(__dirname, '../public/admin')));
 
 // Health check 엔드포인트
 app.get('/health', (_req, res) => {

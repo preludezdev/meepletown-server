@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as gameController from '../controllers/gameController';
 import { authenticate } from '../middlewares/authMiddleware';
+import { adminAuth } from '../middlewares/adminMiddleware';
 import { validateRequest } from '../middlewares/validateRequest';
 
 const router = Router();
@@ -40,7 +41,7 @@ const router = Router();
  *       401:
  *         description: 인증 필요
  */
-router.get('/top-ranked-status', authenticate, gameController.getTopRankedStatus);
+router.get('/top-ranked-status', adminAuth, gameController.getTopRankedStatus);
 
 /**
  * @swagger
@@ -103,7 +104,7 @@ router.get('/top-ranked-status', authenticate, gameController.getTopRankedStatus
  *       401:
  *         description: 인증 필요
  */
-router.post('/sync-and-translate', authenticate, gameController.syncAndTranslateBatch);
+router.post('/sync-and-translate', adminAuth, gameController.syncAndTranslateBatch);
 
 /**
  * @swagger
@@ -127,7 +128,7 @@ router.post('/sync-and-translate', authenticate, gameController.syncAndTranslate
  *       401:
  *         description: 인증 필요
  */
-router.get('/translation-queue', authenticate, gameController.getTranslationQueue);
+router.get('/translation-queue', adminAuth, gameController.getTranslationQueue);
 
 /**
  * @swagger
@@ -152,7 +153,7 @@ router.get('/translation-queue', authenticate, gameController.getTranslationQueu
  *       401:
  *         description: 인증 필요
  */
-router.get('/translation-stats', authenticate, gameController.getTranslationStats);
+router.get('/translation-stats', adminAuth, gameController.getTranslationStats);
 
 /**
  * @swagger
@@ -414,7 +415,7 @@ router.post(
  *       404:
  *         description: 게임을 찾을 수 없음
  */
-router.post('/:bggId/translate', authenticate, gameController.translateGame);
+router.post('/:bggId/translate', adminAuth, gameController.translateGame);
 
 /**
  * @swagger
@@ -447,7 +448,7 @@ router.post('/:bggId/translate', authenticate, gameController.translateGame);
  */
 router.post(
   '/translate-batch',
-  authenticate,
+  adminAuth,
   validateRequest(['gameIds']),
   gameController.translateGames
 );

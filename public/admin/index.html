@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MeepleOn Admin</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3347;
+      --accent: #6c63ff;
+      --accent-hover: #7c74ff;
+      --green: #22c55e;
+      --yellow: #eab308;
+      --red: #ef4444;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --radius: 10px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    header h1 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    header .badge {
+      background: var(--accent);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+      letter-spacing: 0.5px;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 32px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Auth card */
+    .auth-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .auth-card label {
+      font-size: 13px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .auth-card input {
+      flex: 1;
+      min-width: 240px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 8px 12px;
+      font-size: 13px;
+      font-family: 'Menlo', monospace;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .auth-card input:focus { border-color: var(--accent); }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+
+    .status-dot.ok { background: var(--green); }
+    .status-dot.err { background: var(--red); }
+
+    /* Grid for stat cards */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+    }
+
+    .stat-card .label {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .stat-card .value {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .stat-card .sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Section */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .section-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .section-header h2 {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    /* Table */
+    .table-wrap {
+      overflow-x: auto;
+      max-height: 360px;
+      overflow-y: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      background: var(--surface2);
+      padding: 10px 16px;
+      text-align: left;
+      color: var(--text-muted);
+      font-weight: 500;
+      font-size: 12px;
+      letter-spacing: 0.3px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface2); }
+
+    tbody td {
+      padding: 10px 16px;
+      vertical-align: middle;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .pill.yes { background: rgba(34,197,94,0.15); color: var(--green); }
+    .pill.no { background: rgba(239,68,68,0.12); color: var(--red); }
+    .pill.db { background: rgba(108,99,255,0.15); color: var(--accent); }
+    .pill.skip { background: rgba(148,163,184,0.12); color: var(--text-muted); }
+    .pill.trans { background: rgba(34,197,94,0.15); color: var(--green); }
+    .pill.fail { background: rgba(239,68,68,0.12); color: var(--red); }
+
+    /* Sync form */
+    .form-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .form-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-row label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    textarea, input[type="number"] {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 10px 12px;
+      font-size: 13px;
+      font-family: 'Menlo', monospace;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.15s;
+      width: 100%;
+    }
+
+    textarea:focus, input[type="number"]:focus { border-color: var(--accent); }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .checkbox-row input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* Buttons */
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 9px 18px;
+      transition: opacity 0.15s, background 0.15s;
+    }
+
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:not(:disabled):hover { background: var(--accent-hover); }
+
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:not(:disabled):hover { background: var(--border); }
+
+    .btn-danger {
+      background: rgba(239,68,68,0.15);
+      color: var(--red);
+      border: 1px solid rgba(239,68,68,0.25);
+    }
+
+    .btn-danger:not(:disabled):hover { background: rgba(239,68,68,0.25); }
+
+    /* Result box */
+    .result-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      font-family: 'Menlo', monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 400px;
+      overflow-y: auto;
+      color: var(--text-muted);
+      display: none;
+    }
+
+    .result-box.visible { display: block; }
+
+    /* Progress bar */
+    .progress-bar {
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 3px;
+      transition: width 0.4s ease;
+    }
+
+    /* Loading spinner */
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: -3px;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Toast */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 18px;
+      font-size: 13px;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+      max-width: 320px;
+      z-index: 999;
+    }
+
+    #toast.show { opacity: 1; transform: none; }
+
+    /* Empty / error state */
+    .empty {
+      padding: 32px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>MeepleOn Admin</h1>
+  <span class="badge">INTERNAL</span>
+</header>
+
+<div class="container">
+
+  <!-- Auth -->
+  <div class="auth-card">
+    <span class="status-dot" id="authDot"></span>
+    <label for="adminKeyInput">Admin Secret Key</label>
+    <input
+      type="password"
+      id="adminKeyInput"
+      placeholder="ADMIN_SECRET 값 입력"
+      autocomplete="off"
+    />
+    <button class="btn-secondary" onclick="saveKey()">저장</button>
+    <button class="btn-secondary" onclick="loadStats()">새로고침</button>
+  </div>
+
+  <!-- Translation Stats -->
+  <div class="stats-grid" id="statsGrid">
+    <div class="stat-card">
+      <div class="label">이번 달 번역 글자 수</div>
+      <div class="value" id="statChars">—</div>
+      <div class="sub" id="statMonth">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">번역된 게임 수</div>
+      <div class="value" id="statGames">—</div>
+      <div class="sub">이번 달</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">잔여 예산</div>
+      <div class="value" id="statRemain">—</div>
+      <div class="sub" id="statLimit">한도 900,000자</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">예상 비용 (KRW)</div>
+      <div class="value" id="statCost">—</div>
+      <div class="sub">Papago 기준</div>
+    </div>
+  </div>
+
+  <!-- Budget progress -->
+  <div class="section">
+    <div class="section-header">
+      <h2>월간 번역 예산 사용률</h2>
+      <span id="budgetPct" style="font-size:12px;color:var(--text-muted)">—</span>
+    </div>
+    <div style="padding:16px 20px">
+      <div class="progress-bar">
+        <div class="progress-fill" id="budgetBar" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top-ranked status table -->
+  <div class="section">
+    <div class="section-header">
+      <h2>BGG Top-ranked 번역 상태</h2>
+      <button class="btn-secondary" style="font-size:12px;padding:6px 12px" onclick="loadTopRanked()">불러오기</button>
+    </div>
+    <div class="table-wrap">
+      <table id="rankedTable">
+        <thead>
+          <tr>
+            <th>랭크</th>
+            <th>게임명 (EN)</th>
+            <th>BGG ID</th>
+            <th>DB 존재</th>
+            <th>번역 완료</th>
+          </tr>
+        </thead>
+        <tbody id="rankedBody">
+          <tr><td colspan="5" class="empty">왼쪽 "불러오기" 버튼을 눌러주세요</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Sync & Translate -->
+  <div class="section">
+    <div class="section-header">
+      <h2>Sync &amp; Translate 실행</h2>
+    </div>
+    <div class="form-body">
+      <div class="form-row">
+        <label>BGG ID 목록 (쉼표 또는 줄바꿈 구분)</label>
+        <textarea id="bggIdsInput" rows="4">224517, 342942, 161936, 174430, 316554, 233078, 397598, 115746, 167791, 187645</textarea>
+      </div>
+      <div class="form-row">
+        <label>글자 수 한도 (charLimit, 기본 900000)</label>
+        <input type="number" id="charLimitInput" value="900000" min="1000" />
+      </div>
+      <label class="checkbox-row">
+        <input type="checkbox" id="dryRunCheck" checked />
+        <span>Dry Run (번역 비용 없이 계획만 확인)</span>
+      </label>
+      <div class="form-actions">
+        <button class="btn-primary" id="runBtn" onclick="runSyncTranslate()">실행</button>
+        <button class="btn-secondary" onclick="clearResult()">결과 지우기</button>
+      </div>
+      <div id="resultBox" class="result-box"></div>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+  const BASE = '';  // 같은 origin
+
+  function getKey() {
+    return localStorage.getItem('meepleon_admin_key') || '';
+  }
+
+  function saveKey() {
+    const val = document.getElementById('adminKeyInput').value.trim();
+    if (!val) { showToast('키를 입력해주세요'); return; }
+    localStorage.setItem('meepleon_admin_key', val);
+    showToast('저장됨');
+    loadStats();
+  }
+
+  function adminHeaders() {
+    return {
+      'Content-Type': 'application/json',
+      'X-Admin-Key': getKey(),
+    };
+  }
+
+  async function apiFetch(path, options = {}) {
+    const res = await fetch(BASE + path, {
+      headers: adminHeaders(),
+      ...options,
+    });
+    if (res.status === 401) {
+      setAuthDot(false);
+      throw new Error('인증 실패: Admin Key를 확인해주세요');
+    }
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`HTTP ${res.status}: ${text}`);
+    }
+    setAuthDot(true);
+    return res.json();
+  }
+
+  function setAuthDot(ok) {
+    const dot = document.getElementById('authDot');
+    dot.className = 'status-dot ' + (ok ? 'ok' : 'err');
+  }
+
+  function fmt(n) {
+    if (n == null) return '—';
+    return Number(n).toLocaleString();
+  }
+
+  async function loadStats() {
+    try {
+      const data = await apiFetch('/api/v1/games/translation-stats');
+      const s = data.data || data;
+      document.getElementById('statChars').textContent = fmt(s.totalChars);
+      document.getElementById('statGames').textContent = fmt(s.gamesTranslated);
+      document.getElementById('statMonth').textContent = s.yearMonth || '—';
+      document.getElementById('statRemain').textContent = fmt(s.remainingBudget);
+      document.getElementById('statCost').textContent =
+        s.estimatedCostKrw != null ? '₩' + fmt(Math.round(s.estimatedCostKrw)) : '—';
+
+      const limit = s.charLimit || 900000;
+      const used = s.totalChars || 0;
+      const pct = Math.min(100, Math.round((used / limit) * 100));
+      document.getElementById('budgetBar').style.width = pct + '%';
+      document.getElementById('budgetPct').textContent = pct + '%';
+      document.getElementById('budgetBar').style.background =
+        pct >= 90 ? 'var(--red)' : pct >= 70 ? 'var(--yellow)' : 'var(--accent)';
+    } catch (e) {
+      showToast(e.message);
+    }
+  }
+
+  async function loadTopRanked() {
+    const tbody = document.getElementById('rankedBody');
+    tbody.innerHTML = '<tr><td colspan="5" class="empty">불러오는 중...</td></tr>';
+    try {
+      const data = await apiFetch('/api/v1/games/top-ranked-status');
+      const games = (data.data || data).games || [];
+      if (!games.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty">데이터 없음</td></tr>';
+        return;
+      }
+      tbody.innerHTML = games.map((g, i) => `
+        <tr>
+          <td style="color:var(--text-muted)">${g.rank ?? (i + 1)}</td>
+          <td>${g.nameEn || g.name || '—'}</td>
+          <td style="font-family:monospace;color:var(--text-muted)">${g.bggId}</td>
+          <td><span class="pill ${g.inDb ? 'db' : 'no'}">${g.inDb ? 'DB있음' : '없음'}</span></td>
+          <td><span class="pill ${g.translated ? 'yes' : 'no'}">${g.translated ? '완료' : '미번역'}</span></td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="5" class="empty" style="color:var(--red)">${e.message}</td></tr>`;
+    }
+  }
+
+  async function runSyncTranslate() {
+    const rawIds = document.getElementById('bggIdsInput').value;
+    const bggIds = rawIds
+      .split(/[\s,]+/)
+      .map(s => parseInt(s.trim(), 10))
+      .filter(n => !isNaN(n));
+
+    if (!bggIds.length) { showToast('BGG ID를 입력해주세요'); return; }
+
+    const charLimit = parseInt(document.getElementById('charLimitInput').value, 10) || 900000;
+    const dryRun = document.getElementById('dryRunCheck').checked;
+
+    const btn = document.getElementById('runBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>' + (dryRun ? 'Dry Run 중...' : '번역 실행 중...');
+
+    const resultBox = document.getElementById('resultBox');
+    resultBox.className = 'result-box visible';
+    resultBox.textContent = '요청 중...';
+
+    try {
+      const data = await apiFetch('/api/v1/games/sync-and-translate', {
+        method: 'POST',
+        body: JSON.stringify({ bggIds, charLimit, dryRun }),
+      });
+
+      const result = data.data || data;
+      resultBox.textContent = JSON.stringify(result, null, 2);
+
+      // 결과 요약 토스트
+      const msg = dryRun
+        ? `DryRun 완료: ${result.processed}개 처리 예정, ${result.translated}개 번역 예정`
+        : `완료: ${result.translated}개 번역, ${result.skippedAlreadyTranslated}개 스킵`;
+      showToast(msg, 4000);
+
+      // 실제 번역 후 통계 새로고침
+      if (!dryRun) setTimeout(loadStats, 1000);
+    } catch (e) {
+      resultBox.textContent = '오류: ' + e.message;
+      showToast(e.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '실행';
+    }
+  }
+
+  function clearResult() {
+    const box = document.getElementById('resultBox');
+    box.className = 'result-box';
+    box.textContent = '';
+  }
+
+  let toastTimer;
+  function showToast(msg, duration = 3000) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), duration);
+  }
+
+  // 초기화
+  window.addEventListener('DOMContentLoaded', () => {
+    const saved = getKey();
+    if (saved) {
+      document.getElementById('adminKeyInput').value = saved;
+      loadStats();
+    }
+  });
+</script>
+</body>
+</html>
