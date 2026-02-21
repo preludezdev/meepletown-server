@@ -3,6 +3,7 @@ import * as gameService from '../services/gameService';
 import * as gameSyncService from '../services/gameSyncService';
 import * as translationBatchService from '../services/translationBatchService';
 import * as gameRepository from '../repositories/gameRepository';
+import { BGG_TOP_RANKED_IDS } from '../data/bggTopRankedIds';
 import { sendSuccess } from '../utils/response';
 
 // 게임 상세 조회
@@ -225,6 +226,80 @@ export const getTranslationStats = async (
     sendSuccess(res, stats || {
       message: '번역 통계가 없습니다',
       yearMonth: yearMonth || new Date().toISOString().slice(0, 7),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// BGG 랭킹 상위 게임 일괄 동기화 + 번역 (관리자용)
+export const syncAndTranslateBatch = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { bggIds, charLimit, dryRun } = req.body;
+
+    // bggIds 유효성 검사 (선택값)
+    if (bggIds !== undefined && !Array.isArray(bggIds)) {
+      return next(new Error('bggIds는 배열이어야 합니다'));
+    }
+
+    // 백그라운드에서 실행하되 즉시 응답하지 않고 완료 후 결과 반환
+    // (긴 작업이므로 타임아웃 주의. 필요 시 백그라운드 전환 가능)
+    const result = await translationBatchService.syncAndTranslateBatch({
+      bggIds: bggIds as number[] | undefined,
+      charLimit: charLimit as number | undefined,
+      dryRun: dryRun as boolean | undefined,
+    });
+
+    sendSuccess(res, {
+      message: dryRun
+        ? `[DryRun] 번역 계획: ${result.translated}개 게임, ${result.totalCharsUsed}자 예상`
+        : `동기화+번역 완료: ${result.translated}개 게임 번역됨`,
+      ...result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// BGG 랭킹 상위 게임 목록 + 번역 상태 조회 (관리자용)
+export const getTopRankedStatus = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const statusList = await Promise.all(
+      BGG_TOP_RANKED_IDS.map(async (bggId) => {
+        const game = await gameRepository.findGameByBggId(bggId);
+        return {
+          bggId,
+          inDb: !!game,
+          nameEn: game?.nameEn ?? null,
+          nameKo: game?.nameKo ?? null,
+          hasDescriptionKo: !!game?.descriptionKo,
+          bggRankOverall: game?.bggRankOverall ?? null,
+        };
+      })
+    );
+
+    const inDb = statusList.filter((g) => g.inDb).length;
+    const translated = statusList.filter((g) => g.hasDescriptionKo).length;
+    const notInDb = statusList.filter((g) => !g.inDb).length;
+    const notTranslated = statusList.filter((g) => g.inDb && !g.hasDescriptionKo).length;
+
+    sendSuccess(res, {
+      summary: {
+        total: BGG_TOP_RANKED_IDS.length,
+        inDb,
+        notInDb,
+        translated,
+        notTranslated,
+      },
+      games: statusList,
     });
   } catch (error) {
     next(error);

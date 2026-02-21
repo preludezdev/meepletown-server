@@ -1,5 +1,7 @@
 import * as gameRepository from '../repositories/gameRepository';
+import * as gameSyncService from './gameSyncService';
 import * as papagoService from './papagoService';
+import { BGG_TOP_RANKED_IDS } from '../data/bggTopRankedIds';
 
 // 번역 배치 작업 실행 (일일 자동 실행)
 export const runTranslationBatch = async (dailyLimit: number = 2): Promise<void> => {
@@ -119,4 +121,144 @@ export const getTranslationQueue = async (limit: number = 50): Promise<any[]> =>
 export const getMonthlyStats = async (yearMonth?: string): Promise<any> => {
   const targetMonth = yearMonth || new Date().toISOString().slice(0, 7);
   return await gameRepository.getTranslationStats(targetMonth);
+};
+
+// BGG 랭킹 상위 게임 일괄 동기화 + 번역
+// - 이미 DB에 없는 게임은 BGG에서 동기화
+// - 이미 번역된 게임은 스킵 (descriptionKo가 있으면 패스)
+// - 누적 글자 수가 월 한도(90% = 900,000자)를 초과하면 중단
+export const syncAndTranslateBatch = async (options?: {
+  bggIds?: number[];       // 직접 지정 시 이 목록 사용, 없으면 BGG_TOP_RANKED_IDS 사용
+  charLimit?: number;      // 이번 배치의 최대 글자 수 (기본: 남은 월 한도)
+  dryRun?: boolean;        // true면 실제 번역 없이 계획만 반환
+}): Promise<{
+  processed: number;
+  synced: number;
+  translated: number;
+  skippedAlreadyTranslated: number;
+  stoppedByLimit: boolean;
+  totalCharsUsed: number;
+  remainingBudget: number;
+  details: Array<{
+    bggId: number;
+    nameEn: string;
+    action: 'translated' | 'skipped_translated' | 'skipped_limit' | 'sync_failed' | 'translate_failed';
+    chars?: number;
+  }>;
+}> => {
+  const MONTHLY_SAFE_LIMIT = 900000; // 90% of 1,000,000자 (Papago 1 billing unit)
+  const currentMonth = new Date().toISOString().slice(0, 7);
+
+  // 이번 달 누적 사용량 조회
+  const currentStats = await gameRepository.getTranslationStats(currentMonth);
+  const alreadyUsed = currentStats?.totalCharacters || 0;
+  const monthlyBudget = options?.charLimit ?? MONTHLY_SAFE_LIMIT;
+  let remainingBudget = Math.max(0, monthlyBudget - alreadyUsed);
+
+  const targetIds = options?.bggIds ?? BGG_TOP_RANKED_IDS;
+  const dryRun = options?.dryRun ?? false;
+
+  console.log(`[동기화+번역 배치] 시작: ${targetIds.length}개 게임 대상`);
+  console.log(`[동기화+번역 배치] 이번달 누적 사용: ${alreadyUsed}자 / 한도: ${monthlyBudget}자 / 남은 예산: ${remainingBudget}자`);
+
+  const result = {
+    processed: 0,
+    synced: 0,
+    translated: 0,
+    skippedAlreadyTranslated: 0,
+    stoppedByLimit: false,
+    totalCharsUsed: 0,
+    remainingBudget,
+    details: [] as Array<{
+      bggId: number;
+      nameEn: string;
+      action: 'translated' | 'skipped_translated' | 'skipped_limit' | 'sync_failed' | 'translate_failed';
+      chars?: number;
+    }>,
+  };
+
+  for (const bggId of targetIds) {
+    result.processed++;
+
+    // 1. DB에서 게임 조회 (없으면 BGG에서 동기화)
+    let game = await gameRepository.findGameByBggId(bggId);
+
+    if (!game) {
+      try {
+        console.log(`[동기화+번역 배치] BGG 동기화 중: bggId=${bggId}`);
+        game = await gameSyncService.syncGameFromBGG(bggId);
+        result.synced++;
+        // BGG API rate limit 방지
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      } catch (error: any) {
+        console.error(`[동기화+번역 배치] 동기화 실패: bggId=${bggId}`, error.message);
+        result.details.push({ bggId, nameEn: `bggId:${bggId}`, action: 'sync_failed' });
+        continue;
+      }
+    }
+
+    // 2. 이미 번역된 게임 스킵
+    if (game.descriptionKo) {
+      console.log(`[동기화+번역 배치] 이미 번역됨, 스킵: ${game.nameEn}`);
+      result.skippedAlreadyTranslated++;
+      result.details.push({ bggId, nameEn: game.nameEn, action: 'skipped_translated' });
+      continue;
+    }
+
+    // 3. 번역할 글자 수 예측 (description 길이)
+    if (!game.description) {
+      console.log(`[동기화+번역 배치] description 없음, 스킵: ${game.nameEn}`);
+      result.skippedAlreadyTranslated++;
+      result.details.push({ bggId, nameEn: game.nameEn, action: 'skipped_translated' });
+      continue;
+    }
+
+    const estimatedChars = game.description.length;
+
+    // 4. 예산 초과 체크
+    if (estimatedChars > remainingBudget) {
+      console.warn(`[동기화+번역 배치] 예산 초과로 중단: ${game.nameEn} (예상 ${estimatedChars}자 > 남은 ${remainingBudget}자)`);
+      result.stoppedByLimit = true;
+      result.details.push({ bggId, nameEn: game.nameEn, action: 'skipped_limit', chars: estimatedChars });
+      break;
+    }
+
+    // 5. 번역 실행 (dryRun이면 스킵)
+    if (dryRun) {
+      console.log(`[동기화+번역 배치] [DryRun] 번역 예정: ${game.nameEn} (${estimatedChars}자)`);
+      remainingBudget -= estimatedChars;
+      result.totalCharsUsed += estimatedChars;
+      result.translated++;
+      result.details.push({ bggId, nameEn: game.nameEn, action: 'translated', chars: estimatedChars });
+      continue;
+    }
+
+    try {
+      console.log(`[동기화+번역 배치] 번역 시작: ${game.nameEn} (${estimatedChars}자)`);
+      const translationResult = await papagoService.translateGameDescription(game.description);
+      await gameRepository.updateTranslation(game.id, undefined, translationResult.translatedText);
+
+      const usedChars = translationResult.characterCount;
+      await gameRepository.updateTranslationStats(currentMonth, usedChars, 1);
+
+      remainingBudget -= usedChars;
+      result.totalCharsUsed += usedChars;
+      result.translated++;
+      result.details.push({ bggId, nameEn: game.nameEn, action: 'translated', chars: usedChars });
+
+      console.log(`[동기화+번역 배치] 번역 완료: ${game.nameEn} (${usedChars}자 사용, 남은 예산: ${remainingBudget}자)`);
+
+      // Papago API rate limit 방지
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    } catch (error: any) {
+      console.error(`[동기화+번역 배치] 번역 실패: ${game.nameEn}`, error.message);
+      result.details.push({ bggId, nameEn: game.nameEn, action: 'translate_failed' });
+    }
+  }
+
+  result.remainingBudget = remainingBudget;
+
+  console.log(`[동기화+번역 배치] 완료: 처리=${result.processed}, 동기화=${result.synced}, 번역=${result.translated}, 스킵=${result.skippedAlreadyTranslated}, 한도초과중단=${result.stoppedByLimit}`);
+
+  return result;
 };

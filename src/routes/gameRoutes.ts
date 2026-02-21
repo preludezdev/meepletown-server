@@ -7,6 +7,106 @@ const router = Router();
 
 /**
  * @swagger
+ * /api/v1/games/top-ranked-status:
+ *   get:
+ *     summary: BGG 상위 랭킹 게임 번역 상태 조회
+ *     description: BGG 상위 랭킹 게임 목록과 각 게임의 DB 존재 여부 및 번역 상태를 조회합니다. (인증 필요)
+ *     tags: [Games - Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 조회 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 summary:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                     inDb:
+ *                       type: integer
+ *                     notInDb:
+ *                       type: integer
+ *                     translated:
+ *                       type: integer
+ *                     notTranslated:
+ *                       type: integer
+ *                 games:
+ *                   type: array
+ *       401:
+ *         description: 인증 필요
+ */
+router.get('/top-ranked-status', authenticate, gameController.getTopRankedStatus);
+
+/**
+ * @swagger
+ * /api/v1/games/sync-and-translate:
+ *   post:
+ *     summary: BGG 상위 랭킹 게임 일괄 동기화 + 번역
+ *     description: |
+ *       BGG 랭킹 상위 게임들을 순서대로 동기화하고 번역합니다. (인증 필요, 비용 발생)
+ *       - 이미 DB에 없는 게임은 BGG에서 자동 동기화
+ *       - 이미 번역된 게임(descriptionKo 있음)은 스킵
+ *       - 누적 글자 수가 월 한도(기본 900,000자)를 초과하면 자동 중단
+ *       - dryRun=true 로 실제 번역 없이 계획만 미리 확인 가능
+ *     tags: [Games - Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               bggIds:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 description: 처리할 BGG ID 목록 (생략 시 서버 내 BGG_TOP_RANKED_IDS 목록 사용)
+ *                 example: [174430, 167791, 342942]
+ *               charLimit:
+ *                 type: integer
+ *                 description: 이번 배치의 최대 글자 수 한도 (기본 900,000자)
+ *                 example: 900000
+ *               dryRun:
+ *                 type: boolean
+ *                 description: true 이면 실제 번역 없이 계획만 반환 (비용 없음)
+ *                 example: false
+ *     responses:
+ *       200:
+ *         description: 배치 처리 완료
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 processed:
+ *                   type: integer
+ *                 synced:
+ *                   type: integer
+ *                 translated:
+ *                   type: integer
+ *                 skippedAlreadyTranslated:
+ *                   type: integer
+ *                 stoppedByLimit:
+ *                   type: boolean
+ *                 totalCharsUsed:
+ *                   type: integer
+ *                 remainingBudget:
+ *                   type: integer
+ *                 details:
+ *                   type: array
+ *       401:
+ *         description: 인증 필요
+ */
+router.post('/sync-and-translate', authenticate, gameController.syncAndTranslateBatch);
+
+/**
+ * @swagger
  * /api/v1/games/translation-queue:
  *   get:
  *     summary: 번역 대기열 조회
