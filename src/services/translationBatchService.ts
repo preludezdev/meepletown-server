@@ -155,7 +155,7 @@ export const syncAndTranslateBatch = async (options?: {
   const monthlyBudget = options?.charLimit ?? MONTHLY_SAFE_LIMIT;
   let remainingBudget = Math.max(0, monthlyBudget - alreadyUsed);
 
-  const targetIds = options?.bggIds ?? await loadTopRankedIdsFromCsv(1200);
+  const targetIds = options?.bggIds ?? await loadTopRankedIdsFromCsv(3000);
   const dryRun = options?.dryRun ?? false;
 
   console.log(`[동기화+번역 배치] 시작: ${targetIds.length}개 게임 대상`);

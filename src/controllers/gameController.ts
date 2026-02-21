@@ -291,7 +291,7 @@ export const getTopRankedStatus = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const rankedGames = await loadTopRankedGamesFromCsv(1200);
+    const rankedGames = await loadTopRankedGamesFromCsv(3000);
 
     const statusList = await Promise.all(
       rankedGames.map(async ({ bggId, name, rank }) => {
