@@ -1417,17 +1417,16 @@
         const item = taxState.data.find(i => i.id === id);
         if (item) item.nameKo = newValue;
 
-        // data-nameko 속성도 갱신 (정렬 재사용 시 정확한 값 유지)
-        const row = cell.closest('tr');
-        if (row) row.dataset.nameko = newValue;
-
         restoreCell(cell, id, newValue);
 
-        // 번역 상태 pill 업데이트
+        // 번역 상태 pill 및 data-nameko 업데이트
         const row  = cell.closest('tr');
-        const pill = row.querySelector('.pill');
-        pill.className   = 'pill yes';
-        pill.textContent = '완료';
+        if (row) row.dataset.nameko = newValue;
+        const pill = row ? row.querySelector('.pill') : null;
+        if (pill) {
+          pill.className   = 'pill yes';
+          pill.textContent = '완료';
+        }
 
         // stats 카운터 갱신
         const total        = taxState.data.length;
