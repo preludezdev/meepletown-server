@@ -258,17 +258,17 @@ export const syncAndTranslateBatch = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { bggIds, charLimit, dryRun } = req.body;
+    const { bggIds, startRank, endRank, charLimit, dryRun } = req.body;
 
     // bggIds 유효성 검사 (선택값)
     if (bggIds !== undefined && !Array.isArray(bggIds)) {
       return next(new Error('bggIds는 배열이어야 합니다'));
     }
 
-    // 백그라운드에서 실행하되 즉시 응답하지 않고 완료 후 결과 반환
-    // (긴 작업이므로 타임아웃 주의. 필요 시 백그라운드 전환 가능)
     const result = await translationBatchService.syncAndTranslateBatch({
       bggIds: bggIds as number[] | undefined,
+      startRank: startRank as number | undefined,
+      endRank: endRank as number | undefined,
       charLimit: charLimit as number | undefined,
       dryRun: dryRun as boolean | undefined,
     });

@@ -658,9 +658,25 @@
 
           <!-- 전체 랭킹 모드 -->
           <div id="syncModeAll" style="display:none">
-            <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px 14px;font-size:13px;color:var(--text-muted);line-height:1.7">
-              CSV 기준 BGG 랭킹 <strong style="color:var(--text)">1~3000위</strong> 전체를 순서대로 처리합니다.<br>
+            <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px 14px;font-size:13px;color:var(--text-muted);line-height:1.7;margin-bottom:10px">
+              CSV 기준 BGG 랭킹 범위를 지정하여 처리합니다.<br>
               이미 번역된 게임은 자동 스킵되며, 글자 수 한도 초과 시 자동 중단됩니다.
+            </div>
+            <div style="display:flex;gap:12px;align-items:flex-end">
+              <div class="form-row" style="flex:1;margin-bottom:0">
+                <label>시작 랭크</label>
+                <input type="number" id="startRankInput" value="1" min="1" max="3000" placeholder="예: 501" />
+              </div>
+              <div style="padding-bottom:8px;color:var(--text-muted);font-size:18px">~</div>
+              <div class="form-row" style="flex:1;margin-bottom:0">
+                <label>끝 랭크</label>
+                <input type="number" id="endRankInput" value="500" min="1" max="3000" placeholder="예: 1000" />
+              </div>
+              <button class="btn-secondary" style="padding:6px 12px;font-size:12px;margin-bottom:0;height:36px" onclick="setRankPreset(1,500)">1~500</button>
+              <button class="btn-secondary" style="padding:6px 12px;font-size:12px;margin-bottom:0;height:36px" onclick="setRankPreset(501,1000)">501~1000</button>
+              <button class="btn-secondary" style="padding:6px 12px;font-size:12px;margin-bottom:0;height:36px" onclick="setRankPreset(1001,1500)">1001~1500</button>
+              <button class="btn-secondary" style="padding:6px 12px;font-size:12px;margin-bottom:0;height:36px" onclick="setRankPreset(1501,2000)">1501~2000</button>
+              <button class="btn-secondary" style="padding:6px 12px;font-size:12px;margin-bottom:0;height:36px" onclick="setRankPreset(2001,3000)">2001~3000</button>
             </div>
           </div>
 
@@ -870,6 +886,11 @@
     if (mode === 'manual') document.getElementById('charLimitInput').value = '900000';
   }
 
+  function setRankPreset(start, end) {
+    document.getElementById('startRankInput').value = start;
+    document.getElementById('endRankInput').value   = end;
+  }
+
   async function runSyncTranslate() {
     const charLimit = parseInt(document.getElementById('charLimitInput').value, 10) || 900000;
     const dryRun    = document.getElementById('dryRunCheck').checked;
@@ -881,16 +902,25 @@
       const bggIds = rawIds.split(/[\s,]+/).map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
       if (!bggIds.length) { showToast('BGG ID를 입력해주세요'); return; }
       body.bggIds = bggIds;
+    } else {
+      const startRank = parseInt(document.getElementById('startRankInput').value, 10) || 1;
+      const endRank   = parseInt(document.getElementById('endRankInput').value, 10)   || 500;
+      if (startRank > endRank) { showToast('시작 랭크는 끝 랭크보다 작아야 합니다'); return; }
+      body.startRank = startRank;
+      body.endRank   = endRank;
     }
-    // 전체 랭킹 모드: bggIds 미포함 → 서버가 CSV Top 3000 자동 사용
+
+    const rangeLabel = syncMode === 'all'
+      ? `${body.startRank}~${body.endRank}위`
+      : `${(body.bggIds||[]).length}개 ID`;
 
     const btn = document.getElementById('runBtn');
     btn.disabled = true;
-    btn.innerHTML = `<span class="spinner"></span>${dryRun ? 'Dry Run 중...' : '번역 실행 중...'}`;
+    btn.innerHTML = `<span class="spinner"></span>${dryRun ? `Dry Run 중 (${rangeLabel})...` : `번역 중 (${rangeLabel})...`}`;
 
     const box = document.getElementById('resultBox');
     box.className = 'result-box visible';
-    box.textContent = '요청 중...';
+    box.textContent = `요청 중 (${rangeLabel})...`;
 
     try {
       const data   = await apiFetch('/api/v1/games/sync-and-translate', {
