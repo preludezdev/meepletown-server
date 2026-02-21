@@ -372,6 +372,49 @@
     .game-name-en { font-weight: 500; }
     .game-name-ko { font-size: 12px; color: var(--text-muted); }
 
+    /* ── Taxonomy (카테고리/메커니즘) ── */
+    .taxonomy-toolbar {
+      padding: 14px 18px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .taxonomy-stats {
+      display: flex;
+      gap: 8px;
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--text-muted);
+      align-items: center;
+    }
+    .taxonomy-stats strong { color: var(--text); }
+
+    .editable-cell {
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 4px;
+      min-width: 120px;
+      display: inline-block;
+      transition: background 0.1s;
+    }
+    .editable-cell:hover { background: var(--surface2); }
+    .editable-cell.empty { color: var(--text-muted); font-style: italic; font-size: 12px; }
+
+    .editable-input {
+      background: var(--bg);
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+      color: var(--text);
+      padding: 4px 8px;
+      font-size: 13px;
+      width: 100%;
+      outline: none;
+      font-family: inherit;
+    }
+
     /* ── Spinner ── */
     .spinner {
       display: inline-block;
@@ -572,6 +615,9 @@
     <div class="nav-item" data-panel="games" onclick="switchPanel('games', this)">
       <span class="nav-icon">🎲</span> 게임 목록
     </div>
+    <div class="nav-item" data-panel="taxonomy" onclick="switchPanel('taxonomy', this)">
+      <span class="nav-icon">🏷️</span> 카테고리/메커니즘
+    </div>
   </aside>
 
   <!-- ── Main ── -->
@@ -751,6 +797,55 @@
       </div>
 
     </div><!-- /panel-games -->
+
+    <!-- ════ TAXONOMY PANEL ════ -->
+    <div class="panel" id="panel-taxonomy">
+
+      <div class="section" style="overflow:visible">
+
+        <!-- Toolbar -->
+        <div class="taxonomy-toolbar">
+          <!-- 서브 탭: 카테고리 / 메커니즘 -->
+          <div class="filter-tabs">
+            <button class="filter-tab active" id="taxTabCategory" onclick="switchTaxType('categories', this)">카테고리</button>
+            <button class="filter-tab" id="taxTabMechanism" onclick="switchTaxType('mechanisms', this)">메커니즘</button>
+          </div>
+
+          <button class="btn-secondary" style="font-size:12px;padding:5px 10px;white-space:nowrap" onclick="loadTaxonomy()">새로고침</button>
+          <button class="btn-primary" id="taxTranslateBtn" style="font-size:12px;padding:5px 12px;white-space:nowrap" onclick="runTaxonomyTranslate()">
+            자동 번역 실행
+          </button>
+
+          <!-- Stats -->
+          <div class="taxonomy-stats">
+            <span>전체 <strong id="taxTotal">—</strong></span>
+            <span style="color:var(--border)">|</span>
+            <span style="color:var(--green)">번역완료 <strong id="taxTranslated">—</strong></span>
+            <span style="color:var(--border)">|</span>
+            <span style="color:var(--red)">미번역 <strong id="taxUntranslated">—</strong></span>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-wrap" id="taxTableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:50px">ID</th>
+                <th>영문명 (nameEn)</th>
+                <th>한국어명 (nameKo) <span style="font-weight:400;font-size:10px;color:var(--text-muted)">— 클릭하여 편집</span></th>
+                <th style="width:72px">번역</th>
+              </tr>
+            </thead>
+            <tbody id="taxBody">
+              <tr><td colspan="4" class="empty-state">왼쪽 메뉴에서 카테고리/메커니즘을 선택하면 로드됩니다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+    </div><!-- /panel-taxonomy -->
 
   </main>
 </div>
@@ -1148,6 +1243,186 @@
       </div>
     `;
   }
+
+  /* ══════════════════════════════
+     TAXONOMY (카테고리 / 메커니즘)
+  ══════════════════════════════ */
+  const taxState = {
+    type: 'categories', // 'categories' | 'mechanisms'
+    firstLoad: true,
+    data: [],
+  };
+
+  function switchTaxType(type, el) {
+    taxState.type = type;
+    document.querySelectorAll('#panel-taxonomy .filter-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    loadTaxonomy();
+  }
+
+  async function loadTaxonomy() {
+    const tbody = document.getElementById('taxBody');
+    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">불러오는 중...</td></tr>';
+
+    try {
+      const data   = await apiFetch(`/api/v1/games/admin/${taxState.type}`);
+      const result = data.data || data;
+      const items  = result[taxState.type] || result.categories || result.mechanisms || [];
+
+      taxState.data = items;
+
+      document.getElementById('taxTotal').textContent       = fmt(result.total ?? items.length);
+      document.getElementById('taxTranslated').textContent  = fmt(result.translated ?? items.filter(i => i.nameKo).length);
+      document.getElementById('taxUntranslated').textContent = fmt(result.untranslated ?? items.filter(i => !i.nameKo).length);
+
+      renderTaxonomyTable(items);
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="4" class="empty-state" style="color:var(--red)">${e.message}</td></tr>`;
+    }
+  }
+
+  function renderTaxonomyTable(items) {
+    const tbody = document.getElementById('taxBody');
+
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty-state">데이터가 없습니다</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = items.map(item => {
+      const hasKo     = item.nameKo && item.nameKo.trim().length > 0;
+      const koDisplay = hasKo
+        ? `<span class="editable-cell">${esc(item.nameKo)}</span>`
+        : `<span class="editable-cell empty">클릭하여 입력</span>`;
+
+      return `
+        <tr data-id="${item.id}" data-nameen="${esc(item.nameEn)}" data-nameko="${esc(item.nameKo || '')}">
+          <td style="color:var(--text-muted);font-size:12px;font-family:monospace">${item.id}</td>
+          <td style="font-weight:500">${esc(item.nameEn)}</td>
+          <td class="nameko-cell" onclick="makeEditable(this, ${item.id}, ${JSON.stringify(item.nameKo || '')})">
+            ${koDisplay}
+          </td>
+          <td><span class="pill ${hasKo ? 'yes' : 'no'}">${hasKo ? '완료' : '미번역'}</span></td>
+        </tr>`;
+    }).join('');
+  }
+
+  function makeEditable(cell, id, currentValue) {
+    // 이미 편집 중이면 무시
+    if (cell.querySelector('.editable-input')) return;
+
+    const input = document.createElement('input');
+    input.type        = 'text';
+    input.className   = 'editable-input';
+    input.value       = currentValue;
+    input.placeholder = '한국어 이름 입력';
+
+    cell.innerHTML = '';
+    cell.appendChild(input);
+    input.focus();
+    input.select();
+
+    let saved = false;
+
+    async function save() {
+      if (saved) return;
+      saved = true;
+
+      const newValue = input.value.trim();
+
+      // 값이 동일하면 그냥 원래대로
+      if (newValue === currentValue) {
+        restoreCell(cell, id, currentValue);
+        return;
+      }
+
+      if (!newValue) {
+        showToast('빈 값은 저장할 수 없습니다');
+        restoreCell(cell, id, currentValue);
+        return;
+      }
+
+      try {
+        await apiFetch(`/api/v1/games/admin/${taxState.type}/${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ nameKo: newValue }),
+        });
+
+        // 성공: 로컬 데이터 업데이트 후 셀 갱신
+        const item = taxState.data.find(i => i.id === id);
+        if (item) item.nameKo = newValue;
+
+        restoreCell(cell, id, newValue);
+
+        // 번역 상태 pill 업데이트
+        const row  = cell.closest('tr');
+        const pill = row.querySelector('.pill');
+        pill.className   = 'pill yes';
+        pill.textContent = '완료';
+
+        // stats 카운터 갱신
+        const total        = taxState.data.length;
+        const translated   = taxState.data.filter(i => i.nameKo).length;
+        const untranslated = total - translated;
+        document.getElementById('taxTotal').textContent        = fmt(total);
+        document.getElementById('taxTranslated').textContent   = fmt(translated);
+        document.getElementById('taxUntranslated').textContent = fmt(untranslated);
+
+        showToast(`저장됨: "${newValue}"`);
+      } catch (e) {
+        showToast('저장 실패: ' + e.message);
+        restoreCell(cell, id, currentValue);
+      }
+    }
+
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); save(); }
+      if (e.key === 'Escape') { saved = true; restoreCell(cell, id, currentValue); }
+    });
+    input.addEventListener('blur', save);
+  }
+
+  function restoreCell(cell, id, nameKo) {
+    const hasKo = nameKo && nameKo.trim().length > 0;
+    cell.innerHTML = hasKo
+      ? `<span class="editable-cell">${esc(nameKo)}</span>`
+      : `<span class="editable-cell empty">클릭하여 입력</span>`;
+    // 클릭 이벤트는 부모 td의 onclick으로 처리되므로 재등록 불필요
+  }
+
+  async function runTaxonomyTranslate() {
+    const btn      = document.getElementById('taxTranslateBtn');
+    const typeLabel = taxState.type === 'categories' ? '카테고리' : '메커니즘';
+    btn.disabled   = true;
+    btn.innerHTML  = `<span class="spinner"></span>${typeLabel} 번역 중...`;
+
+    try {
+      const endpoint = taxState.type === 'categories'
+        ? '/api/v1/games/admin/translate-categories'
+        : '/api/v1/games/admin/translate-mechanisms';
+
+      await apiFetch(endpoint, { method: 'POST' });
+      showToast(`${typeLabel} 번역 배치를 시작했습니다. 잠시 후 새로고침하세요.`, 4000);
+
+      // 서버에서 번역이 완료되기를 기다렸다가 목록 갱신
+      setTimeout(() => loadTaxonomy(), 3000);
+    } catch (e) {
+      showToast('번역 실행 실패: ' + e.message);
+    } finally {
+      btn.disabled  = false;
+      btn.innerHTML = '자동 번역 실행';
+    }
+  }
+
+  // switchPanel에 taxonomy 초기 로드 훅 추가
+  const _origSwitchPanel = switchPanel;
+  switchPanel = function(name, el) {
+    _origSwitchPanel(name, el);
+    if (name === 'taxonomy' && taxState.firstLoad) {
+      taxState.firstLoad = false;
+      loadTaxonomy();
+    }
+  };
 
   /* ── Init ── */
   window.addEventListener('DOMContentLoaded', () => {

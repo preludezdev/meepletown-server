@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import * as gameService from '../services/gameService';
 import * as gameSyncService from '../services/gameSyncService';
 import * as translationBatchService from '../services/translationBatchService';
+import * as taxonomyTranslationService from '../services/taxonomyTranslationService';
 import * as gameRepository from '../repositories/gameRepository';
 import { loadTopRankedGamesFromCsv } from '../data/bggTopRankedIds';
 import { sendSuccess } from '../utils/response';
@@ -279,6 +280,112 @@ export const syncAndTranslateBatch = async (
         : `동기화+번역 완료: ${result.translated}개 게임 번역됨`,
       ...result,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 카테고리 목록 조회 (관리자용)
+export const listCategories = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const result = await taxonomyTranslationService.getCategoriesStatus();
+    sendSuccess(res, result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 카테고리 nameKo 수동 수정 (관리자용)
+export const updateCategoryNameKo = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = parseInt(req.params.id);
+    const { nameKo } = req.body;
+
+    if (!nameKo || typeof nameKo !== 'string') {
+      return next(new Error('nameKo는 필수 문자열입니다'));
+    }
+
+    await gameRepository.updateCategoryNameKo(id, nameKo);
+    sendSuccess(res, { message: '카테고리 한국어 이름이 수정되었습니다', id, nameKo });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 카테고리 자동 번역 배치 실행 (관리자용)
+export const translateCategories = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    taxonomyTranslationService
+      .translateAllCategories()
+      .then((result) => console.log('[카테고리 번역 배치 완료]', result))
+      .catch((error) => console.error('[카테고리 번역 배치 오류]', error));
+
+    sendSuccess(res, { message: '카테고리 번역 배치를 시작했습니다' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 메커니즘 목록 조회 (관리자용)
+export const listMechanisms = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const result = await taxonomyTranslationService.getMechanismsStatus();
+    sendSuccess(res, result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 메커니즘 nameKo 수동 수정 (관리자용)
+export const updateMechanismNameKo = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = parseInt(req.params.id);
+    const { nameKo } = req.body;
+
+    if (!nameKo || typeof nameKo !== 'string') {
+      return next(new Error('nameKo는 필수 문자열입니다'));
+    }
+
+    await gameRepository.updateMechanismNameKo(id, nameKo);
+    sendSuccess(res, { message: '메커니즘 한국어 이름이 수정되었습니다', id, nameKo });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 메커니즘 자동 번역 배치 실행 (관리자용)
+export const translateMechanisms = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    taxonomyTranslationService
+      .translateAllMechanisms()
+      .then((result) => console.log('[메커니즘 번역 배치 완료]', result))
+      .catch((error) => console.error('[메커니즘 번역 배치 오류]', error));
+
+    sendSuccess(res, { message: '메커니즘 번역 배치를 시작했습니다' });
   } catch (error) {
     next(error);
   }

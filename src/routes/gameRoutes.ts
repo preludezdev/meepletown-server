@@ -494,5 +494,129 @@ router.post(
   gameController.translateGames
 );
 
+/**
+ * @swagger
+ * /api/v1/games/admin/categories:
+ *   get:
+ *     summary: 카테고리 목록 조회
+ *     description: 전체 카테고리 목록과 번역 상태를 조회합니다. (관리자용)
+ *     tags: [Games - Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 조회 성공
+ */
+router.get('/admin/categories', adminAuth, gameController.listCategories);
+
+/**
+ * @swagger
+ * /api/v1/games/admin/categories/{id}:
+ *   patch:
+ *     summary: 카테고리 한국어 이름 수정
+ *     description: 특정 카테고리의 nameKo를 수동으로 수정합니다. (관리자용)
+ *     tags: [Games - Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - nameKo
+ *             properties:
+ *               nameKo:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: 수정 성공
+ */
+router.patch('/admin/categories/:id', adminAuth, gameController.updateCategoryNameKo);
+
+/**
+ * @swagger
+ * /api/v1/games/admin/translate-categories:
+ *   post:
+ *     summary: 카테고리 자동 번역 배치 실행
+ *     description: nameKo가 없는 카테고리를 Papago로 일괄 번역합니다. (관리자용, 비용 발생)
+ *     tags: [Games - Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 배치 시작
+ */
+router.post('/admin/translate-categories', adminAuth, gameController.translateCategories);
+
+/**
+ * @swagger
+ * /api/v1/games/admin/mechanisms:
+ *   get:
+ *     summary: 메커니즘 목록 조회
+ *     description: 전체 메커니즘 목록과 번역 상태를 조회합니다. (관리자용)
+ *     tags: [Games - Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 조회 성공
+ */
+router.get('/admin/mechanisms', adminAuth, gameController.listMechanisms);
+
+/**
+ * @swagger
+ * /api/v1/games/admin/mechanisms/{id}:
+ *   patch:
+ *     summary: 메커니즘 한국어 이름 수정
+ *     description: 특정 메커니즘의 nameKo를 수동으로 수정합니다. (관리자용)
+ *     tags: [Games - Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - nameKo
+ *             properties:
+ *               nameKo:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: 수정 성공
+ */
+router.patch('/admin/mechanisms/:id', adminAuth, gameController.updateMechanismNameKo);
+
+/**
+ * @swagger
+ * /api/v1/games/admin/translate-mechanisms:
+ *   post:
+ *     summary: 메커니즘 자동 번역 배치 실행
+ *     description: nameKo가 없는 메커니즘을 Papago로 일괄 번역합니다. (관리자용, 비용 발생)
+ *     tags: [Games - Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 배치 시작
+ */
+router.post('/admin/translate-mechanisms', adminAuth, gameController.translateMechanisms);
+
 export default router;
 

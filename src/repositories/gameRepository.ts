@@ -378,6 +378,48 @@ export const updateTranslation = async (
   );
 };
 
+// 미번역 카테고리 조회 (nameKo가 NULL인 항목)
+export const findUntranslatedCategories = async (): Promise<GameCategory[]> => {
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    'SELECT * FROM gameCategories WHERE nameKo IS NULL ORDER BY id ASC'
+  );
+  return rows as GameCategory[];
+};
+
+// 미번역 메커니즘 조회 (nameKo가 NULL인 항목)
+export const findUntranslatedMechanisms = async (): Promise<GameMechanism[]> => {
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    'SELECT * FROM gameMechanisms WHERE nameKo IS NULL ORDER BY id ASC'
+  );
+  return rows as GameMechanism[];
+};
+
+// 카테고리 nameKo 업데이트
+export const updateCategoryNameKo = async (id: number, nameKo: string): Promise<void> => {
+  await pool.execute('UPDATE gameCategories SET nameKo = ? WHERE id = ?', [nameKo, id]);
+};
+
+// 메커니즘 nameKo 업데이트
+export const updateMechanismNameKo = async (id: number, nameKo: string): Promise<void> => {
+  await pool.execute('UPDATE gameMechanisms SET nameKo = ? WHERE id = ?', [nameKo, id]);
+};
+
+// 모든 카테고리 조회
+export const findAllCategories = async (): Promise<GameCategory[]> => {
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    'SELECT * FROM gameCategories ORDER BY nameEn ASC'
+  );
+  return rows as GameCategory[];
+};
+
+// 모든 메커니즘 조회
+export const findAllMechanisms = async (): Promise<GameMechanism[]> => {
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    'SELECT * FROM gameMechanisms ORDER BY nameEn ASC'
+  );
+  return rows as GameMechanism[];
+};
+
 // 게임 인기도 점수 계산 및 업데이트 (향후 자동화 시 사용)
 export const updatePopularityScore = async (gameId: number): Promise<void> => {
   await pool.execute(
