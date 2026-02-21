@@ -6,6 +6,25 @@ import * as gameRepository from '../repositories/gameRepository';
 import { loadTopRankedGamesFromCsv } from '../data/bggTopRankedIds';
 import { sendSuccess } from '../utils/response';
 
+// 게임 목록 조회 (어드민용)
+export const getGamesList = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const search = req.query.search as string | undefined;
+    const translated = req.query.translated as 'all' | 'yes' | 'no' | undefined;
+    const page = parseInt(req.query.page as string) || 1;
+    const pageSize = parseInt(req.query.pageSize as string) || 30;
+
+    const result = await gameService.getGamesList({ search, translated, page, pageSize });
+    sendSuccess(res, result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 // 게임 상세 조회
 export const getGameDetail = async (
   req: Request,

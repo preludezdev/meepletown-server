@@ -2,8 +2,17 @@ import * as gameRepository from '../repositories/gameRepository';
 import * as gameRatingRepository from '../repositories/gameRatingRepository';
 import { getOrSyncGame } from './gameSyncService';
 import { GameDetailResponse } from '../models/Game';
+import { FindGamesOptions, FindGamesResult } from '../repositories/gameRepository';
 import { GameRatingWithUser, CreateGameRatingRequest, UpdateGameRatingRequest } from '../models/GameRating';
 import { NotFoundError, BadRequestError, ForbiddenError } from '../utils/errors';
+
+// 게임 목록 조회 (어드민용 - 검색/필터/페이지네이션)
+export const getGamesList = async (options: FindGamesOptions): Promise<FindGamesResult & { page: number; pageSize: number }> => {
+  const page = Math.max(1, options.page ?? 1);
+  const pageSize = Math.min(Math.max(1, options.pageSize ?? 30), 100);
+  const result = await gameRepository.findGames({ ...options, page, pageSize });
+  return { ...result, page, pageSize };
+};
 
 // 게임 상세 조회 (BGG 데이터 + 미플온 평점)
 export const getGameDetail = async (

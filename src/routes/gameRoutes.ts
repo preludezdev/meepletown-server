@@ -157,6 +157,47 @@ router.get('/translation-stats', adminAuth, gameController.getTranslationStats);
 
 /**
  * @swagger
+ * /api/v1/games:
+ *   get:
+ *     summary: 게임 목록 조회 (어드민)
+ *     description: 게임 목록을 검색/필터/페이지네이션으로 조회합니다. (어드민 인증 필요)
+ *     tags: [Games - Admin]
+ *     security:
+ *       - adminKey: []
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: 게임명 검색 (nameEn / nameKo)
+ *       - in: query
+ *         name: translated
+ *         schema:
+ *           type: string
+ *           enum: [all, yes, no]
+ *           default: all
+ *         description: 번역 상태 필터
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: pageSize
+ *         schema:
+ *           type: integer
+ *           default: 30
+ *           maximum: 100
+ *     responses:
+ *       200:
+ *         description: 게임 목록 조회 성공
+ *       401:
+ *         description: 어드민 인증 필요
+ */
+router.get('/', adminAuth, gameController.getGamesList);
+
+/**
+ * @swagger
  * /api/v1/games/{bggId}:
  *   get:
  *     summary: 게임 상세 정보 조회

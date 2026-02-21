@@ -260,6 +260,81 @@ export const findUntranslatedGames = async (limit: number = 10): Promise<Game[]>
   return rows as Game[];
 };
 
+// 게임 목록 조회 (어드민 - 검색/필터/페이지네이션)
+export interface FindGamesOptions {
+  search?: string;
+  translated?: 'all' | 'yes' | 'no';
+  page?: number;
+  pageSize?: number;
+}
+
+export interface GameListItem {
+  id: number;
+  bggId: number;
+  nameEn: string;
+  nameKo: string | null;
+  bggRankOverall: number | null;
+  bggRating: number | null;
+  translated: boolean;
+  thumbnailUrl: string | null;
+}
+
+export interface FindGamesResult {
+  total: number;
+  games: GameListItem[];
+}
+
+export const findGames = async (options: FindGamesOptions = {}): Promise<FindGamesResult> => {
+  const { search, translated = 'all', page = 1, pageSize = 30 } = options;
+  const safePageSize = Math.min(Math.max(1, pageSize), 100);
+  const offset = (Math.max(1, page) - 1) * safePageSize;
+
+  const conditions: string[] = [];
+  const params: (string | number)[] = [];
+
+  if (search && search.trim()) {
+    const keyword = `%${search.trim()}%`;
+    conditions.push('(nameEn LIKE ? OR nameKo LIKE ?)');
+    params.push(keyword, keyword);
+  }
+
+  if (translated === 'yes') {
+    conditions.push("(descriptionKo IS NOT NULL AND descriptionKo != '')");
+  } else if (translated === 'no') {
+    conditions.push("(descriptionKo IS NULL OR descriptionKo = '')");
+  }
+
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  const [countRows] = await pool.execute<RowDataPacket[]>(
+    `SELECT COUNT(*) AS total FROM games ${where}`,
+    params
+  );
+  const total = (countRows[0] as { total: number }).total;
+
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    `SELECT id, bggId, nameEn, nameKo, bggRankOverall, bggRating, thumbnailUrl,
+            (descriptionKo IS NOT NULL AND descriptionKo != '') AS translated
+     FROM games ${where}
+     ORDER BY COALESCE(bggRankOverall, 999999) ASC, id ASC
+     LIMIT ${safePageSize} OFFSET ${offset}`,
+    params
+  );
+
+  const games: GameListItem[] = (rows as any[]).map((row) => ({
+    id: row.id,
+    bggId: row.bggId,
+    nameEn: row.nameEn,
+    nameKo: row.nameKo,
+    bggRankOverall: row.bggRankOverall,
+    bggRating: row.bggRating,
+    thumbnailUrl: row.thumbnailUrl,
+    translated: row.translated === 1 || row.translated === true,
+  }));
+
+  return { total, games };
+};
+
 // 인기도순 게임 조회 (번역 여부 무관)
 export const findGamesByPopularity = async (limit: number = 10): Promise<Game[]> => {
   const [rows] = await pool.execute<RowDataPacket[]>(
