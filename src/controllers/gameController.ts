@@ -28,7 +28,7 @@ export const getGamesList = async (
 
 // alternateNames → nameKo 한국어 이름 일괄 마이그레이션 (어드민)
 export const migrateKoreanNames = async (
-  req: Request,
+  _req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
