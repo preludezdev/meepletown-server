@@ -26,6 +26,20 @@ export const getGamesList = async (
   }
 };
 
+// alternateNames → nameKo 한국어 이름 일괄 마이그레이션 (어드민)
+export const migrateKoreanNames = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const updatedCount = await gameService.migrateKoreanNames();
+    sendSuccess(res, { updatedCount, message: `${updatedCount}개 게임의 nameKo가 업데이트되었습니다` });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // 게임 검색 (공개) - GET /api/v1/games/search?q=keyword&limit=10
 export const searchGames = async (
   req: Request,

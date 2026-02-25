@@ -645,5 +645,20 @@ router.patch('/admin/mechanisms/:id', adminAuth, gameController.updateMechanismN
  */
 router.post('/admin/translate-mechanisms', adminAuth, gameController.translateMechanisms);
 
+/**
+ * @swagger
+ * /api/v1/games/admin/migrate-korean-names:
+ *   post:
+ *     summary: alternateNames → nameKo 한국어 이름 일괄 마이그레이션
+ *     description: nameKo가 없는 게임 중 alternateNames에 한국어가 있는 경우 자동으로 nameKo를 채웁니다. (관리자용)
+ *     tags: [Games - Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 마이그레이션 완료
+ */
+router.post('/admin/migrate-korean-names', adminAuth, gameController.migrateKoreanNames);
+
 export default router;
 

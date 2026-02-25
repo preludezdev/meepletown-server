@@ -454,6 +454,32 @@ export const updateAllPopularityScores = async (): Promise<void> => {
   );
 };
 
+// 기존 게임 중 nameKo가 없고 alternateNames에 한국어가 있는 게임 일괄 마이그레이션
+export const migrateKoreanNamesFromAlternates = async (): Promise<number> => {
+  const koreanRegex = /[\uAC00-\uD7A3]/;
+
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    'SELECT id, alternateNames FROM games WHERE nameKo IS NULL AND alternateNames IS NOT NULL'
+  );
+
+  let updatedCount = 0;
+
+  for (const row of rows) {
+    try {
+      const alternateNames: string[] = JSON.parse(row.alternateNames);
+      const koreanName = alternateNames.find((n) => koreanRegex.test(n));
+      if (koreanName) {
+        await pool.execute('UPDATE games SET nameKo = ? WHERE id = ?', [koreanName, row.id]);
+        updatedCount++;
+      }
+    } catch {
+      // JSON 파싱 실패 시 스킵
+    }
+  }
+
+  return updatedCount;
+};
+
 // 게임 검색 (nameKo / nameEn LIKE, 공개)
 export interface GameSearchResult {
   bggId: number;

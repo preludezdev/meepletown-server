@@ -84,6 +84,11 @@ export const getGameDetail = async (
   return response;
 };
 
+// alternateNames → nameKo 한국어 이름 일괄 마이그레이션 (어드민)
+export const migrateKoreanNames = async (): Promise<number> => {
+  return await gameRepository.migrateKoreanNamesFromAlternates();
+};
+
 // 게임 검색 (공개)
 export const searchGames = async (query: string, limit = 10) => {
   if (!query || query.trim().length === 0) {

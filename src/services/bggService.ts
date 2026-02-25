@@ -52,6 +52,10 @@ export const fetchGameFromBGG = async (bggId: number): Promise<BggGameData | nul
       .map((n: any) => n['@_value'])
       .filter(Boolean);
 
+    // alternateNames 중 한국어(완성형 한글 포함) 이름을 nameKo로 자동 추출
+    const koreanRegex = /[\uAC00-\uD7A3]/;
+    const detectedKoreanName = alternateNames.find((n: string) => koreanRegex.test(n));
+
     // 플레이어 수 추출
     const poll = Array.isArray(item.poll) ? item.poll : [item.poll];
     const playerCountPoll = poll.find((p: any) => p['@_name'] === 'suggested_numplayers');
@@ -187,6 +191,7 @@ export const fetchGameFromBGG = async (bggId: number): Promise<BggGameData | nul
     const gameData: BggGameData = {
       bggId,
       nameEn,
+      nameKo: detectedKoreanName || undefined,
       alternateNames: alternateNames.length > 0 ? alternateNames : undefined,
       yearPublished: item.yearpublished?.['@_value'],
       minPlayers: item.minplayers?.['@_value'],
