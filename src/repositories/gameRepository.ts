@@ -468,7 +468,8 @@ export const searchGamesByQuery = async (
   limit = 10
 ): Promise<GameSearchResult[]> => {
   const like = `%${query}%`;
-  const [rows] = await pool.execute<RowDataPacket[]>(
+  // pool.query() 사용: pool.execute(prepared statement)는 LIMIT ? + GROUP_CONCAT 조합에서 오류 발생
+  const [rows] = await pool.query<RowDataPacket[]>(
     `SELECT g.bggId, g.nameKo, g.nameEn, g.thumbnailUrl,
       GROUP_CONCAT(DISTINCT COALESCE(gc.nameKo, gc.nameEn) ORDER BY gc.nameEn SEPARATOR ',') AS categories
      FROM games g
@@ -479,8 +480,8 @@ export const searchGamesByQuery = async (
      ORDER BY
        CASE WHEN g.nameKo LIKE ? THEN 0 ELSE 1 END,
        COALESCE(g.bggRankOverall, 99999)
-     LIMIT ?`,
-    [like, like, like, limit]
+     LIMIT ${limit}`,
+    [like, like, like]
   );
   return rows as GameSearchResult[];
 };
