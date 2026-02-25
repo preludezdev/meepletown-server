@@ -26,6 +26,22 @@ export const getGamesList = async (
   }
 };
 
+// 게임 검색 (공개) - GET /api/v1/games/search?q=keyword&limit=10
+export const searchGames = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const q = (req.query.q as string) || '';
+    const limit = Math.min(parseInt(req.query.limit as string) || 10, 20);
+    const results = await gameService.searchGames(q, limit);
+    sendSuccess(res, results);
+  } catch (error) {
+    next(error);
+  }
+};
+
 // 게임 상세 조회
 export const getGameDetail = async (
   req: Request,

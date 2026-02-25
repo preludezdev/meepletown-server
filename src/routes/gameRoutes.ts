@@ -198,6 +198,33 @@ router.get('/', adminAuth, gameController.getGamesList);
 
 /**
  * @swagger
+ * /api/v1/games/search:
+ *   get:
+ *     summary: 게임 검색 (자동완성/추천)
+ *     description: 게임 이름(한국어/영어)으로 검색하여 추천 결과를 반환합니다.
+ *     tags: [Games]
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: 검색 키워드
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           maximum: 20
+ *         description: 최대 결과 수
+ *     responses:
+ *       200:
+ *         description: 검색 결과
+ */
+router.get('/search', gameController.searchGames);
+
+/**
+ * @swagger
  * /api/v1/games/{bggId}:
  *   get:
  *     summary: 게임 상세 정보 조회

@@ -84,6 +84,21 @@ export const getGameDetail = async (
   return response;
 };
 
+// 게임 검색 (공개)
+export const searchGames = async (query: string, limit = 10) => {
+  if (!query || query.trim().length === 0) {
+    return [];
+  }
+  const results = await gameRepository.searchGamesByQuery(query.trim(), limit);
+  return results.map((r) => ({
+    bggId: r.bggId,
+    nameKo: r.nameKo,
+    nameEn: r.nameEn,
+    thumbnailUrl: r.thumbnailUrl,
+    categories: r.categories ? r.categories.split(',').filter(Boolean) : [],
+  }));
+};
+
 // 게임 평가 목록 조회
 export const getGameRatings = async (
   bggId: number,

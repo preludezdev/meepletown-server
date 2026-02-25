@@ -454,6 +454,37 @@ export const updateAllPopularityScores = async (): Promise<void> => {
   );
 };
 
+// 게임 검색 (nameKo / nameEn LIKE, 공개)
+export interface GameSearchResult {
+  bggId: number;
+  nameKo: string | null;
+  nameEn: string;
+  thumbnailUrl: string | null;
+  categories: string | null;
+}
+
+export const searchGamesByQuery = async (
+  query: string,
+  limit = 10
+): Promise<GameSearchResult[]> => {
+  const like = `%${query}%`;
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    `SELECT g.bggId, g.nameKo, g.nameEn, g.thumbnailUrl,
+      GROUP_CONCAT(DISTINCT COALESCE(gc.nameKo, gc.nameEn) ORDER BY gc.nameEn SEPARATOR ',') AS categories
+     FROM games g
+     LEFT JOIN gameCategoryMappings gcm ON gcm.gameId = g.id
+     LEFT JOIN gameCategories gc ON gc.id = gcm.categoryId
+     WHERE g.nameKo LIKE ? OR g.nameEn LIKE ?
+     GROUP BY g.bggId, g.nameKo, g.nameEn, g.thumbnailUrl
+     ORDER BY
+       CASE WHEN g.nameKo LIKE ? THEN 0 ELSE 1 END,
+       COALESCE(g.bggRankOverall, 99999)
+     LIMIT ?`,
+    [like, like, like, limit]
+  );
+  return rows as GameSearchResult[];
+};
+
 // 번역 통계 조회 (월별)
 export const getTranslationStats = async (yearMonth: string): Promise<any> => {
   const [rows] = await pool.execute<RowDataPacket[]>(
