@@ -36,11 +36,12 @@ export interface Post {
   updatedAt: Date;
 }
 
-// 목록 조회용 (작성자 닉네임, 아바타 포함)
+// 목록 조회용 (작성자 닉네임, 아바타, 게임 썸네일 포함)
 export interface PostWithAuthor extends Post {
   authorNickname: string;
   authorAvatar: string | null;
   gameName: string | null;
+  gameThumbnailUrl: string | null;
 }
 
 // 글 생성 요청 타입

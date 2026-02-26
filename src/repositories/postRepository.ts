@@ -24,6 +24,7 @@ const rowToPostWithAuthor = (row: RowDataPacket): PostWithAuthor => ({
   authorNickname: row.authorNickname as string,
   authorAvatar: row.authorAvatar as string | null,
   gameName: row.gameName as string | null,
+  gameThumbnailUrl: row.gameThumbnailUrl as string | null,
 });
 
 // 포럼 글 목록 조회 (필터 + 페이지네이션)
@@ -59,9 +60,10 @@ export const findAllPosts = async (
 
   const [rows] = await pool.execute<RowDataPacket[]>(
     `SELECT p.*,
-            u.nickname AS authorNickname,
-            u.avatar   AS authorAvatar,
-            g.nameKo   AS gameName
+            u.nickname     AS authorNickname,
+            u.avatar       AS authorAvatar,
+            g.nameKo       AS gameName,
+            g.thumbnailUrl AS gameThumbnailUrl
      FROM   posts p
      JOIN   users u ON u.id = p.userId
      LEFT JOIN games g ON g.id = p.gameId
@@ -78,9 +80,10 @@ export const findAllPosts = async (
 export const findPostById = async (id: number): Promise<PostWithAuthor | null> => {
   const [rows] = await pool.execute<RowDataPacket[]>(
     `SELECT p.*,
-            u.nickname AS authorNickname,
-            u.avatar   AS authorAvatar,
-            g.nameKo   AS gameName
+            u.nickname     AS authorNickname,
+            u.avatar       AS authorAvatar,
+            g.nameKo       AS gameName,
+            g.thumbnailUrl AS gameThumbnailUrl
      FROM   posts p
      JOIN   users u ON u.id = p.userId
      LEFT JOIN games g ON g.id = p.gameId
@@ -95,9 +98,10 @@ export const findPostById = async (id: number): Promise<PostWithAuthor | null> =
 export const findPostsByUserId = async (userId: number): Promise<PostWithAuthor[]> => {
   const [rows] = await pool.execute<RowDataPacket[]>(
     `SELECT p.*,
-            u.nickname AS authorNickname,
-            u.avatar   AS authorAvatar,
-            g.nameKo   AS gameName
+            u.nickname     AS authorNickname,
+            u.avatar       AS authorAvatar,
+            g.nameKo       AS gameName,
+            g.thumbnailUrl AS gameThumbnailUrl
      FROM   posts p
      JOIN   users u ON u.id = p.userId
      LEFT JOIN games g ON g.id = p.gameId
