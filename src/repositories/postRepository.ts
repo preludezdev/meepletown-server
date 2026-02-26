@@ -69,8 +69,8 @@ export const findAllPosts = async (
      LEFT JOIN games g ON g.id = p.gameId
      ${where}
      ORDER BY p.updatedAt DESC
-     LIMIT ? OFFSET ?`,
-    [...params, pageSize, offset]
+     LIMIT ${pageSize} OFFSET ${offset}`,
+    params
   );
 
   return { posts: rows.map(rowToPostWithAuthor), total };
