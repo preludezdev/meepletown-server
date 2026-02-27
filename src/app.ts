@@ -5,6 +5,7 @@ import swaggerUi from 'swagger-ui-express';
 import routes from './routes';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 import { swaggerSpec } from './config/swagger';
+import { env } from './config/env';
 
 // Express 앱 생성
 const app: Application = express();
@@ -27,7 +28,11 @@ app.use('/admin', express.static(path.join(__dirname, '../public/admin')));
 
 // Health check 엔드포인트
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', message: 'MeepleOn Server is running' });
+  res.json({
+    status: 'ok',
+    env: env.appEnv,
+    message: 'MeepleOn Server is running',
+  });
 });
 
 // API 라우터 설정
