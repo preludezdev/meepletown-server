@@ -7,7 +7,7 @@ import { env } from '../config/env';
  * 주로 대량 알림 발송, 강제 BGG 동기화 등 외부 영향이 큰 API에 적용.
  */
 export const productionOnly = (
-  req: Request,
+  _req: Request,
   res: Response,
   next: NextFunction
 ): void => {
