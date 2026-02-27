@@ -1,4 +1,5 @@
 import cron from 'node-cron';
+import { env } from '../config/env';
 import { fetchHotGamesFromBGG } from './bggService';
 import { syncGamesFromBGG } from './gameSyncService';
 import { recalculatePopularityScores } from './translationBatchService';
@@ -40,6 +41,11 @@ const recalculateScores = async () => {
 
 // 스케줄러 초기화
 export const initScheduler = () => {
+  if (env.disableBggCron) {
+    console.log(`[SCHEDULER] APP_ENV=${env.appEnv} / DISABLE_BGG_CRON=true → BGG 크론 비활성화`);
+    return;
+  }
+
   // 매일 새벽 3시에 BGG Hot List 동기화
   cron.schedule('0 3 * * *', syncHotGames, {
     timezone: 'Asia/Seoul',

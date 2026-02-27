@@ -3,10 +3,14 @@ import dotenv from 'dotenv';
 // .env 파일 로드
 dotenv.config();
 
+type AppEnv = 'production' | 'staging' | 'development';
+
 // 환경변수 타입 정의
 export interface EnvConfig {
   port: number;
   nodeEnv: string;
+  appEnv: AppEnv;
+  isProduction: boolean;
   db: {
     host: string;
     port: number;
@@ -18,8 +22,15 @@ export interface EnvConfig {
     secret: string;
     expiresIn: string;
   };
-  bggApiToken?: string; // BGG API Authorization 토큰
-  adminSecret?: string; // 어드민 API 접근용 시크릿 키
+  bggApiToken?: string;
+  adminSecret?: string;
+  disableBggCron: boolean; // staging에서 BGG 크론 비활성화
+  baseUrl: string;
+  notification?: {
+    fcmProjectId: string;
+    fcmClientEmail: string;
+    fcmPrivateKey: string;
+  };
   papago?: {
     clientId: string;
     clientSecret: string;
@@ -57,9 +68,21 @@ export const getEnvConfig = (): EnvConfig => {
     10
   );
 
+  const rawAppEnv = process.env.APP_ENV || process.env.NODE_ENV || 'development';
+  const appEnv: AppEnv = (['production', 'staging', 'development'].includes(rawAppEnv)
+    ? rawAppEnv
+    : 'development') as AppEnv;
+
+  const hasFcmConfig =
+    process.env.FCM_PROJECT_ID &&
+    process.env.FCM_CLIENT_EMAIL &&
+    process.env.FCM_PRIVATE_KEY;
+
   return {
     port: parseInt(process.env.PORT || '3000', 10),
     nodeEnv: process.env.NODE_ENV || 'development',
+    appEnv,
+    isProduction: appEnv === 'production',
     db: {
       host: dbHost,
       port: dbPort,
@@ -73,6 +96,15 @@ export const getEnvConfig = (): EnvConfig => {
     },
     bggApiToken: process.env.BGG_API_TOKEN,
     adminSecret: process.env.ADMIN_SECRET,
+    disableBggCron: process.env.DISABLE_BGG_CRON === 'true',
+    baseUrl: process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`,
+    notification: hasFcmConfig
+      ? {
+          fcmProjectId: process.env.FCM_PROJECT_ID!,
+          fcmClientEmail: process.env.FCM_CLIENT_EMAIL!,
+          fcmPrivateKey: process.env.FCM_PRIVATE_KEY!.replace(/\\n/g, '\n'),
+        }
+      : undefined,
     papago: process.env.PAPAGO_CLIENT_ID && process.env.PAPAGO_CLIENT_SECRET
       ? {
           clientId: process.env.PAPAGO_CLIENT_ID,
