@@ -482,6 +482,7 @@ export const migrateKoreanNamesFromAlternates = async (): Promise<number> => {
 
 // 게임 검색 (nameKo / nameEn LIKE, 공개)
 export interface GameSearchResult {
+  id: number;
   bggId: number;
   nameKo: string | null;
   nameEn: string;
@@ -496,13 +497,13 @@ export const searchGamesByQuery = async (
   const like = `%${query}%`;
   // pool.query() 사용: pool.execute(prepared statement)는 LIMIT ? + GROUP_CONCAT 조합에서 오류 발생
   const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT g.bggId, g.nameKo, g.nameEn, g.thumbnailUrl,
+    `SELECT g.id, g.bggId, g.nameKo, g.nameEn, g.thumbnailUrl,
       GROUP_CONCAT(DISTINCT COALESCE(gc.nameKo, gc.nameEn) ORDER BY gc.nameEn SEPARATOR ',') AS categories
      FROM games g
      LEFT JOIN gameCategoryMappings gcm ON gcm.gameId = g.id
      LEFT JOIN gameCategories gc ON gc.id = gcm.categoryId
      WHERE g.nameKo LIKE ? OR g.nameEn LIKE ?
-     GROUP BY g.bggId, g.nameKo, g.nameEn, g.thumbnailUrl
+     GROUP BY g.id, g.bggId, g.nameKo, g.nameEn, g.thumbnailUrl
      ORDER BY
        CASE WHEN g.nameKo LIKE ? THEN 0 ELSE 1 END,
        COALESCE(g.bggRankOverall, 99999)
