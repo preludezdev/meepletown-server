@@ -54,4 +54,40 @@ router.post(
  */
 router.get('/me', authenticate, authController.getCurrentUser);
 
+/**
+ * @swagger
+ * /api/v1/auth/verify-phone:
+ *   post:
+ *     summary: 번호인증 완료
+ *     description: Firebase Phone Auth로 인증 완료 후 서버에 전화번호를 저장합니다.
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - phoneNumber
+ *             properties:
+ *               phoneNumber:
+ *                 type: string
+ *                 description: E.164 형식 전화번호 (예: +821012345678)
+ *     responses:
+ *       200:
+ *         description: 인증 완료, 사용자 정보 반환
+ *       400:
+ *         description: phoneNumber 형식 오류
+ *       401:
+ *         description: 인증 필요
+ */
+router.post(
+  '/verify-phone',
+  authenticate,
+  validateRequest(['phoneNumber']),
+  authController.verifyPhone
+);
+
 export default router;

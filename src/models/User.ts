@@ -8,6 +8,8 @@ export interface User {
   avatar: string | null;
   socialId: string;
   socialType: SocialType;
+  phoneNumber: string | null;
+  phoneVerifiedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -19,6 +21,8 @@ export interface UserRow {
   avatar: string | null;
   socialId: string;
   socialType: SocialType;
+  phoneNumber: string | null;
+  phoneVerifiedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,6 +32,9 @@ export interface UserResponse {
   id: number;
   nickname: string;
   avatar: string | null;
+  phoneNumber: string | null;
+  phoneVerifiedAt: string | null;
+  isPhoneVerified: boolean;
   createdAt: Date;
 }
 

@@ -66,3 +66,14 @@ export const findOrCreateUserBySocial = async (
   }
   return newUser;
 };
+
+// 번호인증 완료 정보 업데이트
+export const updatePhoneVerification = async (
+  userId: number,
+  phoneNumber: string
+): Promise<void> => {
+  await pool.execute(
+    'UPDATE users SET phoneNumber = ?, phoneVerifiedAt = CURRENT_TIMESTAMP WHERE id = ?',
+    [phoneNumber, userId]
+  );
+};

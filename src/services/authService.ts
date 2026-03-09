@@ -1,7 +1,10 @@
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
-import { findUserById } from '../repositories/userRepository';
-import { UserResponse } from '../models/User';
+import {
+  findUserById,
+  updatePhoneVerification,
+} from '../repositories/userRepository';
+import { UserResponse, UserRow } from '../models/User';
 import { UnauthorizedError, NotFoundError } from '../utils/errors';
 
 // JWT 토큰 생성
@@ -35,10 +38,28 @@ export const getCurrentUser = async (userId: number): Promise<UserResponse> => {
     throw new NotFoundError('사용자를 찾을 수 없습니다');
   }
 
+  const row = user as UserRow;
+  const phoneVerifiedAt = row.phoneVerifiedAt;
   return {
     id: user.id,
     nickname: user.nickname,
     avatar: user.avatar,
+    phoneNumber: row.phoneNumber ?? null,
+    phoneVerifiedAt: phoneVerifiedAt
+      ? (typeof phoneVerifiedAt === 'object' && 'toISOString' in phoneVerifiedAt
+          ? (phoneVerifiedAt as Date).toISOString()
+          : String(phoneVerifiedAt))
+      : null,
+    isPhoneVerified: !!phoneVerifiedAt,
     createdAt: user.createdAt,
   };
+};
+
+// 번호인증 완료 후 서버에 저장
+export const verifyPhone = async (
+  userId: number,
+  phoneNumber: string
+): Promise<UserResponse> => {
+  await updatePhoneVerification(userId, phoneNumber);
+  return getCurrentUser(userId);
 };
