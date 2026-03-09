@@ -9,11 +9,7 @@ export const getStats = async (
 ): Promise<void> => {
   try {
     const stats = await adminRepository.getAdminStats();
-    sendSuccess(res, {
-      ...stats,
-      forumPosts:  null,
-      boardPosts:  null,
-    });
+    sendSuccess(res, stats);
   } catch (error) {
     next(error);
   }

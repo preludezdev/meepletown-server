@@ -600,6 +600,7 @@
 
     /* 클릭 가능한 행 */
     #gamesBody tr { cursor: pointer; }
+    #forumBody tr { cursor: pointer; }
   </style>
 </head>
 <body>
@@ -631,6 +632,9 @@
     <div class="nav-item" data-panel="taxonomy" onclick="switchPanel('taxonomy', this)">
       <span class="nav-icon">🏷️</span> 카테고리/메커니즘
     </div>
+    <div class="nav-item" data-panel="forum" onclick="switchPanel('forum', this)">
+      <span class="nav-icon">📝</span> 포럼
+    </div>
   </aside>
 
   <!-- ── Main ── -->
@@ -656,15 +660,15 @@
           <div class="value" id="statTotalUsers">—</div>
           <div class="sub">가입 회원</div>
         </div>
-        <div class="stat-card" style="opacity:0.5">
+        <div class="stat-card">
           <div class="label">포럼 게시글 수</div>
-          <div class="value">—</div>
-          <div class="sub">준비중</div>
+          <div class="value" id="statForumPosts">—</div>
+          <div class="sub">게임포럼</div>
         </div>
-        <div class="stat-card" style="opacity:0.5">
+        <div class="stat-card">
           <div class="label">자유 게시판 글 수</div>
-          <div class="value">—</div>
-          <div class="sub">준비중</div>
+          <div class="value" id="statBoardPosts">—</div>
+          <div class="sub">자유게시판</div>
         </div>
       </div>
 
@@ -880,6 +884,78 @@
 
     </div><!-- /panel-taxonomy -->
 
+    <!-- ════ FORUM PANEL ════ -->
+    <div class="panel" id="panel-forum">
+
+      <div class="section" style="overflow:visible">
+        <!-- Toolbar -->
+        <div class="games-toolbar">
+          <div class="filter-tabs">
+            <button class="filter-tab active" data-boardtype="all" onclick="setForumBoardType('all', this)">전체</button>
+            <button class="filter-tab" data-boardtype="game_forum" onclick="setForumBoardType('game_forum', this)">게임포럼</button>
+            <button class="filter-tab" data-boardtype="free_board" onclick="setForumBoardType('free_board', this)">자유게시판</button>
+          </div>
+          <select id="forumCategoryFilter" onchange="loadForumPosts(1)" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:5px 10px;font-size:12px;min-width:100px">
+            <option value="">카테고리 전체</option>
+            <optgroup label="게임포럼">
+              <option value="소식">소식</option>
+              <option value="리뷰">리뷰</option>
+              <option value="자료">자료</option>
+              <option value="질문">질문</option>
+              <option value="공략">공략</option>
+            </optgroup>
+            <optgroup label="자유게시판">
+              <option value="유머">유머</option>
+              <option value="잡담">잡담</option>
+              <option value="창작">창작</option>
+              <option value="모임후기">모임후기</option>
+            </optgroup>
+          </select>
+          <div class="search-input-wrap" style="flex:1;min-width:180px">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="forumSearch" placeholder="제목 검색" oninput="onForumSearchInput()" />
+          </div>
+          <label class="checkbox-row" style="margin:0;white-space:nowrap">
+            <input type="checkbox" id="forumIncludeDraft" onchange="loadForumPosts(1)" />
+            <span>임시저장 포함</span>
+          </label>
+          <button class="btn-secondary" style="font-size:12px;padding:5px 10px;white-space:nowrap" onclick="loadForumPosts(1)">새로고침</button>
+        </div>
+
+        <!-- Table -->
+        <div class="table-wrap" id="forumTableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:50px">ID</th>
+                <th>제목</th>
+                <th style="width:90px">작성자</th>
+                <th style="width:120px">게임</th>
+                <th style="width:70px">카테고리</th>
+                <th style="width:60px">조회/좋아요</th>
+                <th style="width:100px">작성일</th>
+                <th style="width:60px">임시저장</th>
+              </tr>
+            </thead>
+            <tbody id="forumBody">
+              <tr><td colspan="8" class="empty-state">왼쪽 메뉴에서 포럼을 선택하면 로드됩니다</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination">
+          <span id="forumPagInfo">—</span>
+          <div class="page-controls">
+            <button class="btn-secondary page-btn" id="forumPrevBtn" onclick="forumChangePage(-1)" disabled>← 이전</button>
+            <span id="forumPageDisplay" style="font-size:12px;padding:0 4px">1</span>
+            <button class="btn-secondary page-btn" id="forumNextBtn" onclick="forumChangePage(1)" disabled>다음 →</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /panel-forum -->
+
   </main>
 </div>
 
@@ -893,6 +969,17 @@
     <button class="drawer-close" onclick="closeDrawer()">✕</button>
   </div>
   <div class="drawer-body" id="drawerBody">
+    <div class="drawer-loading">불러오는 중...</div>
+  </div>
+</div>
+
+<!-- ── Post Detail Drawer ── -->
+<div class="drawer" id="postDrawer">
+  <div class="drawer-header">
+    <h3 id="postDrawerTitle">글 상세</h3>
+    <button class="drawer-close" onclick="closePostDrawer()">✕</button>
+  </div>
+  <div class="drawer-body" id="postDrawerBody">
     <div class="drawer-loading">불러오는 중...</div>
   </div>
 </div>
@@ -941,6 +1028,10 @@
     if (name === 'translation') {
       loadTranslationStats();
     }
+    if (name === 'forum' && forumState.firstLoad) {
+      forumState.firstLoad = false;
+      loadForumPosts(1);
+    }
   }
 
   /* ── Helpers ── */
@@ -965,6 +1056,8 @@
       document.getElementById('statTotalGames').textContent      = fmt(s.totalGames);
       document.getElementById('statTranslatedGames').textContent = fmt(s.translatedGames);
       document.getElementById('statTotalUsers').textContent      = fmt(s.totalUsers);
+      document.getElementById('statForumPosts').textContent      = fmt(s.forumPosts);
+      document.getElementById('statBoardPosts').textContent      = fmt(s.boardPosts);
     } catch (e) { showToast(e.message); }
   }
 
@@ -1186,6 +1279,7 @@
      GAME DETAIL DRAWER
   ══════════════════════════════ */
   function openDrawer() {
+    document.getElementById('postDrawer').classList.remove('open');
     document.getElementById('drawerOverlay').classList.add('open');
     document.getElementById('gameDrawer').classList.add('open');
     document.body.style.overflow = 'hidden';
@@ -1194,7 +1288,19 @@
   function closeDrawer() {
     document.getElementById('drawerOverlay').classList.remove('open');
     document.getElementById('gameDrawer').classList.remove('open');
+    document.getElementById('postDrawer').classList.remove('open');
     document.body.style.overflow = '';
+  }
+
+  function closePostDrawer() {
+    closeDrawer();
+  }
+
+  function openPostDrawer() {
+    document.getElementById('gameDrawer').classList.remove('open');
+    document.getElementById('drawerOverlay').classList.add('open');
+    document.getElementById('postDrawer').classList.add('open');
+    document.body.style.overflow = 'hidden';
   }
 
   // ESC 키로 닫기
@@ -1497,6 +1603,165 @@
     } finally {
       btn.disabled  = false;
       btn.innerHTML = '자동 번역 실행';
+    }
+  }
+
+  /* ══════════════════════════════
+     FORUM PANEL
+  ══════════════════════════════ */
+  const forumState = {
+    firstLoad: true,
+    page: 1,
+    pageSize: 20,
+    total: 0,
+    boardType: 'all',
+    category: '',
+    search: '',
+    includeDraft: false,
+    posts: [],
+    debounceTimer: null,
+  };
+
+  function setForumBoardType(value, el) {
+    forumState.boardType = value;
+    document.querySelectorAll('#panel-forum .filter-tabs .filter-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    loadForumPosts(1);
+  }
+
+  function onForumSearchInput() {
+    clearTimeout(forumState.debounceTimer);
+    forumState.debounceTimer = setTimeout(() => {
+      forumState.search = document.getElementById('forumSearch').value;
+      loadForumPosts(1);
+    }, 300);
+  }
+
+  function forumChangePage(delta) {
+    const newPage = forumState.page + delta;
+    const maxPage = Math.ceil(forumState.total / forumState.pageSize);
+    if (newPage < 1 || newPage > maxPage) return;
+    loadForumPosts(newPage);
+  }
+
+  async function loadForumPosts(page = 1) {
+    forumState.page = page;
+    forumState.category = document.getElementById('forumCategoryFilter').value;
+    forumState.search = document.getElementById('forumSearch').value;
+    forumState.includeDraft = document.getElementById('forumIncludeDraft').checked;
+    const { boardType, category, search, includeDraft, pageSize } = forumState;
+
+    const params = new URLSearchParams({
+      page: String(page),
+      pageSize: String(pageSize),
+    });
+    if (boardType !== 'all') params.set('boardType', boardType);
+    if (category) params.set('category', category);
+    if (search) params.set('search', search);
+    if (includeDraft) params.set('includeDraft', 'true');
+
+    const tbody = document.getElementById('forumBody');
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">불러오는 중...</td></tr>';
+
+    try {
+      const data = await apiFetch('/api/v1/admin/posts?' + params.toString());
+      const result = data.data || data;
+      const posts = result.posts || [];
+      forumState.posts = posts;
+      forumState.total = result.total || 0;
+
+      updateForumPagination();
+
+      if (!posts.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">검색 결과가 없습니다</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = posts.map(p => {
+        const draftPill = p.isDraft
+          ? '<span class="pill no">임시저장</span>'
+          : '';
+        const dateStr = p.createdAt ? new Date(p.createdAt).toLocaleDateString('ko-KR') : '—';
+        return `
+          <tr onclick="openPostDetail(${p.id})" title="클릭하면 상세보기" style="cursor:pointer">
+            <td style="color:var(--text-muted);font-size:12px;font-family:monospace">${p.id}</td>
+            <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(p.title)}">${esc(p.title)}</td>
+            <td style="font-size:12px">${esc(p.authorNickname || '—')}</td>
+            <td style="font-size:12px;color:var(--text-muted);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(p.gameName || '')}">${esc(p.gameName || '—')}</td>
+            <td style="font-size:12px">${esc(p.category)}</td>
+            <td style="font-size:12px;color:var(--text-muted)">${p.viewCount || 0} / ${p.likeCount || 0}</td>
+            <td style="font-size:12px;color:var(--text-muted)">${dateStr}</td>
+            <td>${draftPill}</td>
+          </tr>`;
+      }).join('');
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="8" class="empty-state" style="color:var(--red)">${e.message}</td></tr>`;
+    }
+  }
+
+  function updateForumPagination() {
+    const { page, pageSize, total } = forumState;
+    const maxPage = Math.max(1, Math.ceil(total / pageSize));
+    const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
+    const to = Math.min(page * pageSize, total);
+
+    document.getElementById('forumPagInfo').textContent =
+      total > 0 ? `${fmt(from)} – ${fmt(to)} / 총 ${fmt(total)}개` : '결과 없음';
+    document.getElementById('forumPageDisplay').textContent = `${page} / ${maxPage}`;
+    document.getElementById('forumPrevBtn').disabled = page <= 1;
+    document.getElementById('forumNextBtn').disabled = page >= maxPage;
+  }
+
+  function openPostDetail(postId) {
+    const post = forumState.posts.find(p => p.id === postId);
+    if (!post) return;
+
+    document.getElementById('postDrawerTitle').textContent = `#${post.id} ${esc(post.title).substring(0, 30)}${post.title.length > 30 ? '…' : ''}`;
+
+    const textPreview = (post.contentBlocks || [])
+      .filter(b => b.type === 'text' && b.value)
+      .map(b => b.value)
+      .join(' ')
+      .substring(0, 500);
+    const contentHtml = textPreview
+      ? `<div class="desc-box">${esc(textPreview)}</div>`
+      : '<div class="desc-box empty-desc">본문 없음</div>';
+
+    document.getElementById('postDrawerBody').innerHTML = `
+      <div class="drawer-hero">
+        <div class="drawer-hero-info" style="width:100%">
+          <div class="en" style="font-size:15px;margin-bottom:4px">${esc(post.title)}</div>
+          <div class="meta-chips">
+            <div class="chip">작성자 <span>${esc(post.authorNickname || '—')}</span></div>
+            ${post.gameName ? `<div class="chip">게임 <span>${esc(post.gameName)}</span></div>` : ''}
+            <div class="chip">카테고리 <span>${esc(post.category)}</span></div>
+            <div class="chip">조회 <span>${post.viewCount || 0}</span></div>
+            <div class="chip">좋아요 <span>${post.likeCount || 0}</span></div>
+            ${post.isDraft ? '<div class="chip" style="color:var(--yellow)">임시저장</div>' : ''}
+          </div>
+        </div>
+      </div>
+      <div class="detail-section">
+        <div class="detail-section-title">본문 미리보기</div>
+        ${contentHtml}
+      </div>
+      <div class="form-actions">
+        <button class="btn-primary" style="background:var(--red)" onclick="deletePostFromDrawer(${post.id})">글 삭제</button>
+      </div>
+    `;
+    openPostDrawer();
+  }
+
+  async function deletePostFromDrawer(postId) {
+    if (!confirm('정말 이 글을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+    try {
+      await apiFetch(`/api/v1/admin/posts/${postId}`, { method: 'DELETE' });
+      showToast('글이 삭제되었습니다');
+      closePostDrawer();
+      loadForumPosts(forumState.page);
+      loadDashboard();
+    } catch (e) {
+      showToast('삭제 실패: ' + e.message);
     }
   }
 
