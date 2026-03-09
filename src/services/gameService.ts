@@ -96,6 +96,7 @@ export const searchGames = async (query: string, limit = 10) => {
   }
   const results = await gameRepository.searchGamesByQuery(query.trim(), limit);
   return results.map((r) => ({
+    id: r.id,
     bggId: r.bggId,
     nameKo: r.nameKo,
     nameEn: r.nameEn,
