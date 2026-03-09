@@ -50,6 +50,13 @@ export const googleLogin = async (
     id: user.id,
     nickname: user.nickname,
     avatar: user.avatar,
+    phoneNumber: user.phoneNumber ?? null,
+    phoneVerifiedAt: user.phoneVerifiedAt
+      ? (user.phoneVerifiedAt instanceof Date
+          ? user.phoneVerifiedAt.toISOString()
+          : String(user.phoneVerifiedAt))
+      : null,
+    isPhoneVerified: !!user.phoneVerifiedAt,
     createdAt: user.createdAt,
   };
 
