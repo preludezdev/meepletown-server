@@ -1,6 +1,7 @@
 import pool from '../config/database';
 import {
   Listing,
+  ListingListItem,
   CreateListingRequest,
   UpdateListingRequest,
   ListingFilter,
@@ -8,47 +9,72 @@ import {
 } from '../models/Listing';
 import { RowDataPacket } from 'mysql2';
 
-// 모든 Listing 조회 (필터, 정렬, 페이지네이션)
+// 모든 Listing 조회 (필터, 정렬, 페이지네이션) - seller, thumbnailUrl 포함
 export const findAllListings = async (
   filter?: ListingFilter,
   sort: ListingSort = 'latest',
   page: number = 1,
   pageSize: number = 20
-): Promise<{ listings: Listing[]; total: number }> => {
+): Promise<{ listings: ListingListItem[]; total: number }> => {
   const offset = (page - 1) * pageSize;
-  let whereClause = 'WHERE isHidden = FALSE';
+  let whereClause = 'WHERE l.isHidden = FALSE';
   const params: any[] = [];
 
   // 필터 적용
   if (filter?.gameName) {
-    whereClause += ' AND gameName LIKE ?';
+    whereClause += ' AND l.gameName LIKE ?';
     params.push(`%${filter.gameName}%`);
   }
   if (filter?.method) {
-    whereClause += ' AND method = ?';
+    whereClause += ' AND l.method = ?';
     params.push(filter.method);
   }
 
   // 정렬
-  let orderClause = 'ORDER BY createdAt DESC'; // 최신순
+  let orderClause = 'ORDER BY l.createdAt DESC';
   if (sort === 'latest') {
-    orderClause = 'ORDER BY createdAt DESC';
+    orderClause = 'ORDER BY l.createdAt DESC';
   }
 
-  // 전체 개수 조회
+  // 전체 개수 조회 (JOIN 없이 동일 조건)
   const [countResult] = await pool.execute<RowDataPacket[]>(
-    `SELECT COUNT(*) as total FROM listings ${whereClause}`,
+    `SELECT COUNT(*) as total FROM listings l ${whereClause}`,
     params
   );
   const total = (countResult[0] as { total: number }).total || 0;
 
-  // Listing 목록 조회 (LIMIT/OFFSET은 숫자로 직접 전달)
+  // Listing 목록 조회: users JOIN (seller), 첫 번째 매물 이미지 또는 게임 이미지 (thumbnail)
   const [rows] = await pool.execute<RowDataPacket[]>(
-    `SELECT * FROM listings ${whereClause} ${orderClause} LIMIT ${pageSize} OFFSET ${offset}`,
+    `SELECT
+      l.id, l.userId, l.gameId, l.gameName, l.title, l.price, l.method, l.region,
+      l.description, l.contactLink, l.status, l.isHidden, l.createdAt, l.updatedAt,
+      u.nickname AS sellerNickname, u.avatar AS sellerAvatar,
+      COALESCE(
+        (SELECT li.url FROM listingImages li WHERE li.listingId = l.id ORDER BY li.orderIndex ASC LIMIT 1),
+        g.thumbnailUrl,
+        g.imageUrl
+      ) AS thumbnailUrl
+    FROM listings l
+    LEFT JOIN users u ON l.userId = u.id
+    LEFT JOIN games g ON l.gameId = g.id
+    ${whereClause} ${orderClause} LIMIT ${pageSize} OFFSET ${offset}`,
     params
   );
 
-  return { listings: rows as Listing[], total };
+  const listings: ListingListItem[] = (rows as any[]).map((row) => {
+    const seller =
+      row.sellerNickname != null
+        ? { nickname: row.sellerNickname, avatar: row.sellerAvatar ?? null }
+        : undefined;
+    const { sellerNickname, sellerAvatar, ...listingFields } = row;
+    return {
+      ...listingFields,
+      seller,
+      thumbnailUrl: row.thumbnailUrl ?? null,
+    } as ListingListItem;
+  });
+
+  return { listings, total };
 };
 
 // 오늘의 매물 조회 (오늘 생성된 것만, 숨김 제외)
@@ -72,6 +98,17 @@ export const findListingById = async (id: number): Promise<Listing | null> => {
     [id]
   );
   return (rows[0] as Listing) || null;
+};
+
+// userId의 판매완료 건수 조회
+export const getSoldCountByUserId = async (
+  userId: number
+): Promise<number> => {
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    'SELECT COUNT(*) as cnt FROM listings WHERE userId = ? AND status = ?',
+    [userId, 'sold']
+  );
+  return (rows[0] as { cnt: number }).cnt || 0;
 };
 
 // UserId로 Listing 조회 (내 매물)

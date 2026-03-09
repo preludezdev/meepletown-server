@@ -6,7 +6,9 @@ import {
   createListing,
   updateListing,
   deleteListing,
+  getSoldCountByUserId,
 } from '../repositories/listingRepository';
+import { findUserById } from '../repositories/userRepository';
 import {
   findImagesByListingId,
   createListingImage,
@@ -15,6 +17,7 @@ import {
 import { getOrSyncGame } from './gameSyncService';
 import {
   Listing,
+  ListingListItem,
   ListingWithImages,
   CreateListingRequest,
   UpdateListingRequest,
@@ -31,7 +34,7 @@ export const getAllListings = async (
   page: number = 1,
   pageSize: number = 20
 ): Promise<{
-  listings: Listing[];
+  listings: ListingListItem[];
   total: number;
   page: number;
   pageSize: number;
@@ -45,18 +48,32 @@ export const getTodayListings = async (limit: number = 20): Promise<Listing[]> =
   return findTodayListings(limit);
 };
 
-// Listing 상세 조회 (이미지 포함)
-export const getListingById = async (id: number): Promise<ListingWithImages> => {
+// Listing 상세 조회 (이미지 + seller 포함)
+export const getListingById = async (
+  id: number
+): Promise<ListingWithImages & { seller?: { nickname: string; avatar: string | null; soldCount?: number } }> => {
   const listing = await findListingById(id);
   if (!listing) {
     throw new NotFoundError('매물을 찾을 수 없습니다');
   }
 
   const images = await findImagesByListingId(id);
+  const user = await findUserById(listing.userId);
+  const soldCount = await getSoldCountByUserId(listing.userId);
+
+  const seller =
+    user != null
+      ? {
+          nickname: user.nickname,
+          avatar: user.avatar ?? null,
+          soldCount,
+        }
+      : undefined;
 
   return {
     ...listing,
     images,
+    seller,
   };
 };
 

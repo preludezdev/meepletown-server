@@ -59,3 +59,9 @@ export interface ListingFilter {
 
 // Listing 정렬 타입
 export type ListingSort = 'latest'; // 최신순만 (v0)
+
+// 리스트용 DTO (seller, thumbnailUrl 포함)
+export interface ListingListItem extends Listing {
+  seller?: { nickname: string; avatar: string | null };
+  thumbnailUrl?: string | null;
+}
