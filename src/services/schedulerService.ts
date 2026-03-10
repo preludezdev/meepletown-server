@@ -3,25 +3,34 @@ import { env } from '../config/env';
 import { fetchHotGamesFromBGG } from './bggService';
 import { syncGamesFromBGG } from './gameSyncService';
 import { recalculatePopularityScores } from './translationBatchService';
+import * as settingsRepository from '../repositories/settingsRepository';
 
-// BGG Hot List 동기화 작업
-const syncHotGames = async () => {
-  console.log('🔄 BGG Hot List 동기화 시작...');
+// BGG Hot List 동기화 (DB 설정 기반)
+const syncHotGames = async (): Promise<void> => {
   try {
-    // BGG에서 인기 게임 목록 가져오기
+    const settings = await settingsRepository.getBatchSettings();
+    if (!settings.enabled) {
+      return;
+    }
+
+    const now = new Date();
+    const kstHour = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' })).getHours();
+    if (kstHour !== settings.hour) {
+      return;
+    }
+
+    console.log('🔄 BGG Hot List 동기화 시작...');
     const hotGameIds = await fetchHotGamesFromBGG();
-    
+
     if (hotGameIds.length === 0) {
       console.log('⚠️ BGG Hot List가 비어있습니다');
       return;
     }
 
     console.log(`📋 BGG Hot List: ${hotGameIds.length}개 게임 발견`);
-    
-    // 게임 동기화 (최대 50개만)
-    const idsToSync = hotGameIds.slice(0, 50);
+    const idsToSync = hotGameIds.slice(0, settings.size);
     await syncGamesFromBGG(idsToSync);
-    
+
     console.log('✅ BGG Hot List 동기화 완료');
   } catch (error: any) {
     console.error('❌ BGG Hot List 동기화 실패:', error.message);
@@ -41,13 +50,13 @@ const recalculateScores = async () => {
 
 // 스케줄러 초기화
 export const initScheduler = () => {
-  if (env.disableBggCron) {
-    console.log(`[SCHEDULER] APP_ENV=${env.appEnv} / DISABLE_BGG_CRON=true → BGG 크론 비활성화`);
+  if (!env.enableBggCron) {
+    console.log(`[SCHEDULER] ENABLE_BGG_CRON=false → BGG 배치 비활성화`);
     return;
   }
 
-  // 매일 새벽 3시에 BGG Hot List 동기화
-  cron.schedule('0 3 * * *', syncHotGames, {
+  // 매시 0분에 실행, DB 설정에 따라 실제 동기화 여부 결정
+  cron.schedule('0 * * * *', syncHotGames, {
     timezone: 'Asia/Seoul',
   });
 
@@ -57,13 +66,25 @@ export const initScheduler = () => {
   });
 
   console.log('⏰ 스케줄러 초기화 완료');
-  console.log('  - 매일 03:00: BGG Hot List 동기화');
+  console.log('  - 매시 0분: BGG Hot List 동기화 (설정 시각에 실행)');
   console.log('  - 매주 일요일 04:00: 인기도 점수 재계산');
 };
 
-// 즉시 실행 (테스트용)
-export const runSyncNow = async () => {
-  await syncHotGames();
+// 즉시 실행 (어드민 API용, DB 설정 반영)
+export const runSyncNow = async (): Promise<void> => {
+  const settings = await settingsRepository.getBatchSettings();
+  if (!settings.enabled) {
+    throw new Error('배치가 비활성화되어 있습니다. 운영 탭에서 활성화해주세요.');
+  }
+
+  console.log('🔄 BGG Hot List 수동 동기화 시작...');
+  const hotGameIds = await fetchHotGamesFromBGG();
+  if (hotGameIds.length === 0) {
+    throw new Error('BGG Hot List가 비어있습니다');
+  }
+  const idsToSync = hotGameIds.slice(0, settings.size);
+  await syncGamesFromBGG(idsToSync);
+  console.log('✅ BGG Hot List 수동 동기화 완료');
 };
 
 export const runScoreRecalculationNow = async () => {

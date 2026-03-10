@@ -24,7 +24,7 @@ export interface EnvConfig {
   };
   bggApiToken?: string;
   adminSecret?: string;
-  disableBggCron: boolean; // staging에서 BGG 크론 비활성화
+  enableBggCron: boolean; // true = BGG 배치 활성화, false = 비활성화
   baseUrl: string;
   notification?: {
     fcmProjectId: string;
@@ -96,7 +96,7 @@ export const getEnvConfig = (): EnvConfig => {
     },
     bggApiToken: process.env.BGG_API_TOKEN,
     adminSecret: process.env.ADMIN_SECRET,
-    disableBggCron: process.env.DISABLE_BGG_CRON === 'true',
+    enableBggCron: process.env.ENABLE_BGG_CRON === 'true',
     baseUrl: process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`,
     notification: hasFcmConfig
       ? {
