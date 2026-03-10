@@ -48,10 +48,10 @@ const recalculateScores = async () => {
   }
 };
 
-// 스케줄러 초기화
+// 스케줄러 초기화 (프로덕션에서만 배치 동작)
 export const initScheduler = () => {
-  if (!env.enableBggCron) {
-    console.log(`[SCHEDULER] ENABLE_BGG_CRON=false → BGG 배치 비활성화`);
+  if (!env.enableBggCron || !env.isProduction) {
+    console.log(`[SCHEDULER] 배치 비활성화 (ENABLE_BGG_CRON=false 또는 production 아님, appEnv=${env.appEnv})`);
     return;
   }
 
