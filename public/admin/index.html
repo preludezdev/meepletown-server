@@ -672,19 +672,30 @@
         </div>
       </div>
 
-      <!-- 게임 데이터 덤프 (스테이징 마이그레이션용) -->
+      <!-- 게임 데이터 덤프 / 복원 (스테이징 마이그레이션용) -->
       <div class="section">
         <div class="section-header">
-          <h2>게임 데이터 덤프</h2>
+          <h2>게임 데이터 덤프 / 복원</h2>
           <span style="font-size:12px;color:var(--text-muted)">스테이징 DB 마이그레이션용</span>
         </div>
         <div class="form-body">
           <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">
-            게임, 카테고리, 메커니즘, 번역 데이터를 SQL 파일로 다운로드합니다. 스테이징 DB에 복원할 때 사용하세요.
+            <strong>덤프:</strong> 프로덕션에서 SQL 파일 다운로드. <strong>복원:</strong> 스테이징 어드민에서 덤프 파일 업로드 → 현재 DB에 적용 (외부 mysql 접속 불가 시 사용).
           </p>
-          <button class="btn-primary" id="btnDumpGameData" onclick="downloadDumpGameData()">
-            SQL 덤프 다운로드
-          </button>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <button class="btn-primary" id="btnDumpGameData" onclick="downloadDumpGameData()">
+              SQL 덤프 다운로드
+            </button>
+            <span style="color:var(--text-muted)">|</span>
+            <input type="file" id="restoreFileInput" accept=".sql" style="display:none" onchange="onRestoreFileSelected(event)">
+            <button class="btn-secondary" id="btnRestoreGameData" onclick="document.getElementById('restoreFileInput').click()">
+              덤프 파일 선택
+            </button>
+            <button class="btn-primary" id="btnRestoreSubmit" onclick="restoreDumpGameData()" disabled style="opacity:0.6">
+              선택된 파일 복원
+            </button>
+            <span id="restoreFileName" style="font-size:12px;color:var(--text-muted)"></span>
+          </div>
         </div>
       </div>
 
@@ -1077,6 +1088,8 @@
     } catch (e) { showToast(e.message); }
   }
 
+  let pendingRestoreSql = null;
+
   async function downloadDumpGameData() {
     const btn = document.getElementById('btnDumpGameData');
     btn.disabled = true;
@@ -1098,6 +1111,46 @@
     } finally {
       btn.disabled = false;
       btn.textContent = 'SQL 덤프 다운로드';
+    }
+  }
+
+  function onRestoreFileSelected(ev) {
+    const file = ev.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function() {
+      pendingRestoreSql = reader.result;
+      document.getElementById('btnRestoreSubmit').disabled = false;
+      document.getElementById('btnRestoreSubmit').style.opacity = '1';
+      document.getElementById('restoreFileName').textContent = file.name;
+    };
+    reader.readAsText(file, 'UTF-8');
+  }
+
+  async function restoreDumpGameData() {
+    if (!pendingRestoreSql) { showToast('파일을 먼저 선택해주세요'); return; }
+    const btn = document.getElementById('btnRestoreSubmit');
+    btn.disabled = true;
+    btn.textContent = '복원 중...';
+    try {
+      const res = await fetch(BASE + '/api/v1/admin/restore-game-data', {
+        method: 'POST',
+        headers: { ...adminHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sql: pendingRestoreSql })
+      });
+      const data = await res.json();
+      if (res.status === 401) { setAuthDot(false); throw new Error('인증 실패'); }
+      if (data.success) {
+        showToast(data.data?.message || '복원 완료');
+        loadDashboard();
+      } else {
+        showToast(data.error || '복원 실패');
+      }
+    } catch (e) {
+      showToast(e.message || '복원 실패');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '선택된 파일 복원';
     }
   }
 

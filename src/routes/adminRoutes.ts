@@ -7,6 +7,7 @@ const router = Router();
 
 router.get('/stats', adminAuth, adminController.getStats);
 router.get('/dump-game-data', adminAuth, adminController.dumpGameData);
+router.post('/restore-game-data', adminAuth, adminController.restoreGameData);
 router.get('/posts', adminAuth, adminPostController.getPosts);
 router.delete('/posts/:id', adminAuth, adminPostController.deletePost);
 

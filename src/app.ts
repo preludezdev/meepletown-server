@@ -12,7 +12,7 @@ const app: Application = express();
 
 // 미들웨어 설정
 app.use(cors()); // CORS 허용
-app.use(express.json()); // JSON 파싱
+app.use(express.json({ limit: '20mb' })); // JSON 파싱 (덤프 복원용 대용량 허용)
 app.use(express.urlencoded({ extended: true })); // URL 인코딩 파싱
 
 // Swagger API 문서
