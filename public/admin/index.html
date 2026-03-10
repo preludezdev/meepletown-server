@@ -684,7 +684,7 @@
       <div class="section">
         <div class="section-header">
           <h2>BGG 배치 설정</h2>
-          <span style="font-size:12px;color:var(--text-muted)">매일 지정 시각에 Hot List 동기화</span>
+          <span style="font-size:12px;color:var(--text-muted)">Hot List 또는 CSV 랭킹 기반 동기화</span>
           <span id="batchEnvBadge" style="margin-left:8px;font-size:11px;padding:2px 8px;border-radius:4px;background:var(--surface2);color:var(--text-muted)">—</span>
         </div>
         <div class="form-body">
@@ -692,8 +692,15 @@
             배치 설정 및 실행은 프로덕션 환경에서만 가능합니다. 현재 환경에서는 조회만 가능합니다.
           </div>
           <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6">
-            BGG Hot List(인기 게임 50개)에서 지정 개수만큼 DB로 동기화합니다. 설정 시각(KST)에 매시 0분에 실행되며, 비활성화 시 자동 실행되지 않습니다.
+            <strong>Hot List:</strong> BGG 인기 게임 API (~50개). <strong>CSV 랭킹:</strong> boardgames_ranks_top20000.csv 기반, 랭킹순 상위 1~1000개/일. 설정 시각(KST)에 매시 0분에 실행됩니다.
           </p>
+          <div class="form-row">
+            <label>동기화 소스</label>
+            <select id="batchSourceSelect" onchange="updateBatchSizeLimit()">
+              <option value="hot">Hot List (BGG API, ~50개)</option>
+              <option value="csv">CSV 랭킹 (상위 1~1000개/일)</option>
+            </select>
+          </div>
           <div class="form-row">
             <label>활성화</label>
             <label class="checkbox-row">
@@ -731,14 +738,49 @@
             </select>
           </div>
           <div class="form-row">
-            <label>배치당 개수 (1~100)</label>
-            <input type="number" id="batchSizeInput" min="1" max="100" value="50" />
+            <label id="batchSizeLabel">배치당 개수 (1~50)</label>
+            <input type="number" id="batchSizeInput" min="1" max="1000" value="50" />
+          </div>
+          <div class="form-row">
+            <label>요청 간 딜레이 (ms, rate limit 방지)</label>
+            <input type="number" id="batchDelayInput" min="500" max="3000" value="1500" />
+            <span style="font-size:12px;color:var(--text-muted);margin-left:6px">500~3000, 기본 1500</span>
           </div>
           <div class="form-actions">
             <button class="btn-primary" id="btnSaveBatch" onclick="saveBatchSettings()">저장</button>
             <button class="btn-secondary" id="btnRunBatchNow" onclick="runBatchNow()">지금 실행</button>
             <span id="batchSaveToast" style="font-size:12px;color:var(--text-muted);margin-left:8px"></span>
           </div>
+        </div>
+      </div>
+
+      <!-- 랭킹 동기화 현황 및 수동 동기화 -->
+      <div class="section">
+        <div class="section-header">
+          <h2>랭킹 동기화 현황</h2>
+          <button class="btn-secondary" style="font-size:12px;padding:5px 10px" onclick="loadSyncStats()">새로고침</button>
+        </div>
+        <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
+          <div class="stat-card">
+            <div class="label">전체 동기화 게임 수</div>
+            <div class="value" id="syncStatTotal">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">상위 2만 중 동기화된 수</div>
+            <div class="value" id="syncStatInTop20k">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">랭킹 N위까지 완료</div>
+            <div class="value" id="syncStatHighestRank">—</div>
+          </div>
+        </div>
+        <div class="form-body">
+          <div class="form-row">
+            <label>수동 동기화 (BGG ID 입력)</label>
+            <textarea id="manualBggIdsInput" rows="3" placeholder="쉼표, 공백, 줄바꿈으로 구분. 예: 174430, 167791, 233078"></textarea>
+          </div>
+          <button class="btn-primary" id="btnManualSync" onclick="runManualSync()">선택 게임 동기화</button>
+          <span id="manualSyncResult" style="font-size:12px;color:var(--text-muted);margin-left:10px"></span>
         </div>
       </div>
 
@@ -1124,6 +1166,7 @@
     }
     if (name === 'operations') {
       loadBatchSettings();
+      loadSyncStats();
     }
     if (name === 'translation') {
       loadTranslationStats();
@@ -1163,13 +1206,25 @@
 
   /* ── 배치 설정 (운영 탭) ── */
   let batchCanConfigure = false;
+  function updateBatchSizeLimit() {
+    const src = document.getElementById('batchSourceSelect').value;
+    const max = src === 'csv' ? 1000 : 50;
+    document.getElementById('batchSizeInput').max = max;
+    document.getElementById('batchSizeLabel').textContent = '배치당 개수 (1~' + max + ')';
+    const cur = parseInt(document.getElementById('batchSizeInput').value, 10);
+    if (cur > max) document.getElementById('batchSizeInput').value = String(max);
+  }
+
   async function loadBatchSettings() {
     try {
       const data = await apiFetch('/api/v1/admin/batch-settings');
       const s = data.data || data;
       document.getElementById('batchEnabledCheck').checked = s.enabled;
       document.getElementById('batchHourSelect').value = String(s.hour);
+      document.getElementById('batchSourceSelect').value = s.source || 'csv';
       document.getElementById('batchSizeInput').value = String(s.size);
+      document.getElementById('batchDelayInput').value = String(s.requestDelayMs ?? 1500);
+      updateBatchSizeLimit();
       batchCanConfigure = s.canConfigureBatch === true;
       const envBadge = document.getElementById('batchEnvBadge');
       const prodMsg = document.getElementById('batchProductionOnlyMsg');
@@ -1180,7 +1235,9 @@
       const disabled = !batchCanConfigure;
       document.getElementById('batchEnabledCheck').disabled = disabled;
       document.getElementById('batchHourSelect').disabled = disabled;
+      document.getElementById('batchSourceSelect').disabled = disabled;
       document.getElementById('batchSizeInput').disabled = disabled;
+      document.getElementById('batchDelayInput').disabled = disabled;
       document.getElementById('btnSaveBatch').disabled = disabled;
       document.getElementById('btnRunBatchNow').disabled = disabled;
     } catch (e) { showToast(e.message); }
@@ -1198,12 +1255,49 @@
           enabled: document.getElementById('batchEnabledCheck').checked,
           hour: parseInt(document.getElementById('batchHourSelect').value, 10),
           size: parseInt(document.getElementById('batchSizeInput').value, 10),
+          source: document.getElementById('batchSourceSelect').value,
+          requestDelayMs: parseInt(document.getElementById('batchDelayInput').value, 10),
         }),
       });
       toast.textContent = '저장됨';
       showToast('배치 설정이 저장되었습니다');
     } catch (e) {
       showToast(e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function loadSyncStats() {
+    try {
+      const data = await apiFetch('/api/v1/admin/sync-stats');
+      const s = data.data || data;
+      document.getElementById('syncStatTotal').textContent = fmt(s.totalGames);
+      document.getElementById('syncStatInTop20k').textContent = fmt(s.syncedInTop20000);
+      document.getElementById('syncStatHighestRank').textContent = s.highestRankCompleted > 0 ? s.highestRankCompleted + '위' : '—';
+    } catch (e) { showToast(e.message); }
+  }
+
+  async function runManualSync() {
+    const input = document.getElementById('manualBggIdsInput').value;
+    const ids = input.split(/[\s,]+/).map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n > 0);
+    if (!ids.length) { showToast('BGG ID를 입력해주세요'); return; }
+    const btn = document.getElementById('btnManualSync');
+    const result = document.getElementById('manualSyncResult');
+    btn.disabled = true;
+    result.textContent = '';
+    try {
+      const data = await apiFetch('/api/v1/games/sync', {
+        method: 'POST',
+        body: JSON.stringify({ bggIds: ids }),
+      });
+      const d = data.data || data;
+      result.textContent = d.games?.length ? d.games.length + '개 동기화 완료' : (d.message || '완료');
+      showToast(d.message || '동기화 완료');
+      loadSyncStats();
+    } catch (e) {
+      showToast(e.message);
+      result.textContent = '실패';
     } finally {
       btn.disabled = false;
     }

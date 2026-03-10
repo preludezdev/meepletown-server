@@ -3,10 +3,11 @@ import { env } from '../config/env';
 import { fetchHotGamesFromBGG } from './bggService';
 import { syncGamesFromBGG } from './gameSyncService';
 import { recalculatePopularityScores } from './translationBatchService';
+import { loadTopRankedIdsFromCsv } from '../data/bggTopRankedIds';
 import * as settingsRepository from '../repositories/settingsRepository';
 
-// BGG Hot List 동기화 (DB 설정 기반)
-const syncHotGames = async (): Promise<void> => {
+// BGG 배치 동기화 (DB 설정 기반, Hot List 또는 CSV 랭킹)
+const syncBggBatch = async (): Promise<void> => {
   try {
     const settings = await settingsRepository.getBatchSettings();
     if (!settings.enabled) {
@@ -19,21 +20,31 @@ const syncHotGames = async (): Promise<void> => {
       return;
     }
 
-    console.log('🔄 BGG Hot List 동기화 시작...');
-    const hotGameIds = await fetchHotGamesFromBGG();
+    let idsToSync: number[];
 
-    if (hotGameIds.length === 0) {
-      console.log('⚠️ BGG Hot List가 비어있습니다');
-      return;
+    if (settings.source === 'csv') {
+      idsToSync = await loadTopRankedIdsFromCsv(settings.size);
+      if (idsToSync.length === 0) {
+        console.log('⚠️ CSV 랭킹에서 게임을 찾을 수 없습니다 (boardgames_ranks_top3000.csv 확인)');
+        return;
+      }
+      console.log(`🔄 BGG CSV 랭킹 동기화 시작 (상위 ${settings.size}개)`);
+      console.log(`📋 CSV: ${idsToSync.length}개 게임 로드`);
+    } else {
+      const hotGameIds = await fetchHotGamesFromBGG();
+      if (hotGameIds.length === 0) {
+        console.log('⚠️ BGG Hot List가 비어있습니다');
+        return;
+      }
+      idsToSync = hotGameIds.slice(0, settings.size);
+      console.log(`🔄 BGG Hot List 동기화 시작`);
+      console.log(`📋 Hot List: ${idsToSync.length}개 게임`);
     }
 
-    console.log(`📋 BGG Hot List: ${hotGameIds.length}개 게임 발견`);
-    const idsToSync = hotGameIds.slice(0, settings.size);
-    await syncGamesFromBGG(idsToSync);
-
-    console.log('✅ BGG Hot List 동기화 완료');
+    await syncGamesFromBGG(idsToSync, { delayMs: settings.requestDelayMs });
+    console.log('✅ BGG 배치 동기화 완료');
   } catch (error: any) {
-    console.error('❌ BGG Hot List 동기화 실패:', error.message);
+    console.error('❌ BGG 배치 동기화 실패:', error.message);
   }
 };
 
@@ -56,7 +67,7 @@ export const initScheduler = () => {
   }
 
   // 매시 0분에 실행, DB 설정에 따라 실제 동기화 여부 결정
-  cron.schedule('0 * * * *', syncHotGames, {
+  cron.schedule('0 * * * *', syncBggBatch, {
     timezone: 'Asia/Seoul',
   });
 
@@ -66,7 +77,7 @@ export const initScheduler = () => {
   });
 
   console.log('⏰ 스케줄러 초기화 완료');
-  console.log('  - 매시 0분: BGG Hot List 동기화 (설정 시각에 실행)');
+  console.log('  - 매시 0분: BGG 배치 동기화 (Hot List 또는 CSV, 설정 시각에 실행)');
   console.log('  - 매주 일요일 04:00: 인기도 점수 재계산');
 };
 
@@ -77,14 +88,25 @@ export const runSyncNow = async (): Promise<void> => {
     throw new Error('배치가 비활성화되어 있습니다. 운영 탭에서 활성화해주세요.');
   }
 
-  console.log('🔄 BGG Hot List 수동 동기화 시작...');
-  const hotGameIds = await fetchHotGamesFromBGG();
-  if (hotGameIds.length === 0) {
-    throw new Error('BGG Hot List가 비어있습니다');
+  let idsToSync: number[];
+
+  if (settings.source === 'csv') {
+    idsToSync = await loadTopRankedIdsFromCsv(settings.size);
+    if (idsToSync.length === 0) {
+      throw new Error('CSV 랭킹에서 게임을 찾을 수 없습니다 (boardgames_ranks_top3000.csv 확인)');
+    }
+    console.log(`🔄 BGG CSV 랭킹 수동 동기화 시작 (상위 ${settings.size}개)`);
+  } else {
+    const hotGameIds = await fetchHotGamesFromBGG();
+    if (hotGameIds.length === 0) {
+      throw new Error('BGG Hot List가 비어있습니다');
+    }
+    idsToSync = hotGameIds.slice(0, settings.size);
+    console.log('🔄 BGG Hot List 수동 동기화 시작...');
   }
-  const idsToSync = hotGameIds.slice(0, settings.size);
-  await syncGamesFromBGG(idsToSync);
-  console.log('✅ BGG Hot List 수동 동기화 완료');
+
+  await syncGamesFromBGG(idsToSync, { delayMs: settings.requestDelayMs });
+  console.log('✅ BGG 배치 수동 동기화 완료');
 };
 
 export const runScoreRecalculationNow = async () => {

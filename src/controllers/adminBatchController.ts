@@ -36,11 +36,13 @@ export const updateBatchSettings = async (
       });
       return;
     }
-    const { enabled, hour, size } = req.body || {};
+    const { enabled, hour, size, source, requestDelayMs } = req.body || {};
     await settingsRepository.updateBatchSettings({
       ...(enabled !== undefined && { enabled: Boolean(enabled) }),
       ...(hour !== undefined && { hour: Number(hour) }),
       ...(size !== undefined && { size: Number(size) }),
+      ...(source === 'hot' || source === 'csv' ? { source } : {}),
+      ...(requestDelayMs !== undefined && { requestDelayMs: Number(requestDelayMs) }),
     });
     const updated = await settingsRepository.getBatchSettings();
     sendSuccess(res, { message: '배치 설정이 저장되었습니다', settings: updated });

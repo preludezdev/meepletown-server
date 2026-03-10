@@ -455,9 +455,10 @@ router.post('/sync/:bggId', gameController.syncGame); // 임시로 authenticate 
  */
 router.post(
   '/sync',
+  adminAuth,
   validateRequest(['bggIds']),
   gameController.syncGames
-); // 임시로 authenticate 제거
+);
 
 /**
  * @swagger

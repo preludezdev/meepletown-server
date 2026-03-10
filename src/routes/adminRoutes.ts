@@ -7,6 +7,7 @@ import { adminAuth } from '../middlewares/adminMiddleware';
 const router = Router();
 
 router.get('/stats', adminAuth, adminController.getStats);
+router.get('/sync-stats', adminAuth, adminController.getSyncStats);
 router.get('/dump-game-data', adminAuth, adminController.dumpGameData);
 router.post('/restore-game-data', adminAuth, adminController.restoreGameData);
 router.get('/batch-settings', adminAuth, adminBatchController.getBatchSettings);

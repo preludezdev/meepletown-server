@@ -178,7 +178,7 @@ export const syncGames = async (
       return next(new Error('bggIds는 배열이어야 합니다'));
     }
 
-    const games = await gameSyncService.syncGamesFromBGG(bggIds);
+    const games = await gameSyncService.syncGamesFromBGG(bggIds, { delayMs: 1000 });
     sendSuccess(res, { 
       message: `${games.length}개 게임 동기화 완료`,
       games 

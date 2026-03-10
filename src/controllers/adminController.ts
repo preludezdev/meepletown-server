@@ -2,7 +2,21 @@ import { Request, Response, NextFunction } from 'express';
 import * as adminRepository from '../repositories/adminRepository';
 import * as gameDumpService from '../services/gameDumpService';
 import * as gameRestoreService from '../services/gameRestoreService';
+import * as adminSyncStatsService from '../services/adminSyncStatsService';
 import { sendSuccess } from '../utils/response';
+
+export const getSyncStats = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const stats = await adminSyncStatsService.getSyncStats();
+    sendSuccess(res, stats);
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const getStats = async (
   _req: Request,

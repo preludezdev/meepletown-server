@@ -51,12 +51,20 @@ export const syncGameFromBGG = async (bggId: number): Promise<Game> => {
   return game;
 };
 
-// 여러 게임 동기화
-export const syncGamesFromBGG = async (bggIds: number[]): Promise<Game[]> => {
-  const games: Game[] = [];
+const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-  for (const bggId of bggIds) {
+// 여러 게임 동기화 (delayMs: BGG API 요청 간 딜레이, rate limit 방지)
+export const syncGamesFromBGG = async (
+  bggIds: number[],
+  options?: { delayMs?: number }
+): Promise<Game[]> => {
+  const games: Game[] = [];
+  const delayMs = options?.delayMs ?? 0;
+
+  for (let i = 0; i < bggIds.length; i++) {
+    const bggId = bggIds[i];
     try {
+      if (i > 0 && delayMs > 0) await delay(delayMs);
       const game = await syncGameFromBGG(bggId);
       games.push(game);
       console.log(`✅ 게임 동기화 완료: ${game.nameEn} (bggId: ${bggId})`);

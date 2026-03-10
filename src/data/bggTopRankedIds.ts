@@ -25,17 +25,17 @@ const parseCsvLine = (line: string): { id: number; name: string; rank: number } 
 };
 
 // BGG 랭킹 CSV 파일에서 상위 N개 게임 ID를 읽어 rank 순으로 반환
-// CSV 파일: src/data/boardgames_ranks_top3000.csv (BGG 공식 데이터 덤프에서 추출)
-// 업데이트 방법: BGG(boardgamegeek.com/data_dumps/bg_ranks)에서 새 CSV 다운로드 후
-//   python3로 rank 1~3000, is_expansion=0 필터링 → boardgames_ranks_top3000.csv 교체
+// CSV: boardgames_ranks_top3000.csv (1~3000), boardgames_ranks_top20000.csv (1~20000)
 export const loadTopRankedIdsFromCsv = async (limit: number = 3000): Promise<number[]> => {
   const games = await loadTopRankedGamesFromCsv(limit);
   return games.map((g) => g.bggId);
 };
 
 // 랭킹 정보(id + name + rank) 포함 버전
+// limit > 3000 이면 top20000.csv 사용, else top3000.csv
 export const loadTopRankedGamesFromCsv = async (limit: number = 3000): Promise<BggRankedGame[]> => {
-  const csvPath = path.join(__dirname, 'boardgames_ranks_top3000.csv');
+  const csvName = limit > 3000 ? 'boardgames_ranks_top20000.csv' : 'boardgames_ranks_top3000.csv';
+  const csvPath = path.join(__dirname, csvName);
 
   if (!fs.existsSync(csvPath)) {
     console.warn('[BGG 랭킹] CSV 파일이 없습니다:', csvPath);
