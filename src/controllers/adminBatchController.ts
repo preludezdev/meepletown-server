@@ -46,10 +46,11 @@ export const updateBatchSettings = async (
       });
       return;
     }
-    const { enabled, hour, size, source, requestDelayMs } = req.body || {};
+    const { enabled, hour, hours, size, source, requestDelayMs } = req.body || {};
     await settingsRepository.updateBatchSettings({
       ...(enabled !== undefined && { enabled: Boolean(enabled) }),
       ...(hour !== undefined && { hour: Number(hour) }),
+      ...(hours !== undefined && Array.isArray(hours) && hours.length > 0 && { hours: hours.map(Number) }),
       ...(size !== undefined && { size: Number(size) }),
       ...(source === 'hot' || source === 'csv' ? { source } : {}),
       ...(requestDelayMs !== undefined && { requestDelayMs: Number(requestDelayMs) }),

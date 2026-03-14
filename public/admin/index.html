@@ -710,33 +710,10 @@
             </label>
           </div>
           <div class="form-row">
-            <label>실행 시각 (KST)</label>
-            <select id="batchHourSelect">
-              <option value="0">00:00</option>
-              <option value="1">01:00</option>
-              <option value="2">02:00</option>
-              <option value="3" selected>03:00</option>
-              <option value="4">04:00</option>
-              <option value="5">05:00</option>
-              <option value="6">06:00</option>
-              <option value="7">07:00</option>
-              <option value="8">08:00</option>
-              <option value="9">09:00</option>
-              <option value="10">10:00</option>
-              <option value="11">11:00</option>
-              <option value="12">12:00</option>
-              <option value="13">13:00</option>
-              <option value="14">14:00</option>
-              <option value="15">15:00</option>
-              <option value="16">16:00</option>
-              <option value="17">17:00</option>
-              <option value="18">18:00</option>
-              <option value="19">19:00</option>
-              <option value="20">20:00</option>
-              <option value="21">21:00</option>
-              <option value="22">22:00</option>
-              <option value="23">23:00</option>
-            </select>
+            <label>실행 시각 (KST, 복수 선택 가능)</label>
+            <div id="batchHoursWrap" style="display:grid;grid-template-columns:repeat(8,1fr);gap:6px 12px;margin-top:6px">
+              <!-- 0~23 체크박스는 JS로 생성 -->
+            </div>
           </div>
           <div class="form-row">
             <label id="batchSizeLabel">배치당 개수 (1~50)</label>
@@ -1225,12 +1202,41 @@
     if (cur > max) document.getElementById('batchSizeInput').value = String(max);
   }
 
+  function initBatchHourCheckboxes() {
+    const wrap = document.getElementById('batchHoursWrap');
+    if (wrap.children.length > 0) return;
+    for (let h = 0; h < 24; h++) {
+      const label = document.createElement('label');
+      label.className = 'checkbox-row';
+      label.style.cssText = 'font-size:12px;cursor:pointer';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'batch-hour-cb';
+      cb.dataset.hour = String(h);
+      cb.id = 'batchHour' + h;
+      label.appendChild(cb);
+      label.appendChild(document.createTextNode(' ' + String(h).padStart(2,'0') + ':00'));
+      wrap.appendChild(label);
+    }
+  }
+
+  function getBatchHours() {
+    return [...document.querySelectorAll('.batch-hour-cb')]
+      .filter(cb => cb.checked)
+      .map(cb => parseInt(cb.dataset.hour, 10))
+      .sort((a,b) => a - b);
+  }
+
   async function loadBatchSettings() {
     try {
+      initBatchHourCheckboxes();
       const data = await apiFetch('/api/v1/admin/batch-settings');
       const s = data.data || data;
       document.getElementById('batchEnabledCheck').checked = s.enabled;
-      document.getElementById('batchHourSelect').value = String(s.hour);
+      const hours = s.hours && s.hours.length ? s.hours : [s.hour ?? 3];
+      document.querySelectorAll('.batch-hour-cb').forEach(cb => {
+        cb.checked = hours.includes(parseInt(cb.dataset.hour, 10));
+      });
       document.getElementById('batchSourceSelect').value = s.source || 'csv';
       document.getElementById('batchSizeInput').value = String(s.size);
       document.getElementById('batchDelayInput').value = String(s.requestDelayMs ?? 1500);
@@ -1244,7 +1250,7 @@
       prodMsg.style.display = batchCanConfigure ? 'none' : 'block';
       const disabled = !batchCanConfigure;
       document.getElementById('batchEnabledCheck').disabled = disabled;
-      document.getElementById('batchHourSelect').disabled = disabled;
+      document.querySelectorAll('.batch-hour-cb').forEach(cb => { cb.disabled = disabled; });
       document.getElementById('batchSourceSelect').disabled = disabled;
       document.getElementById('batchSizeInput').disabled = disabled;
       document.getElementById('batchDelayInput').disabled = disabled;
@@ -1259,11 +1265,16 @@
     btn.disabled = true;
     toast.textContent = '';
     try {
+      const hours = getBatchHours();
+      if (hours.length === 0) {
+        showToast('실행 시각을 최소 1개 이상 선택해주세요');
+        return;
+      }
       await apiFetch('/api/v1/admin/batch-settings', {
         method: 'PATCH',
         body: JSON.stringify({
           enabled: document.getElementById('batchEnabledCheck').checked,
-          hour: parseInt(document.getElementById('batchHourSelect').value, 10),
+          hours,
           size: parseInt(document.getElementById('batchSizeInput').value, 10),
           source: document.getElementById('batchSourceSelect').value,
           requestDelayMs: parseInt(document.getElementById('batchDelayInput').value, 10),

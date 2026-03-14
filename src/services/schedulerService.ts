@@ -17,7 +17,7 @@ const syncBggBatch = async (): Promise<void> => {
 
     const now = new Date();
     const kstHour = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' })).getHours();
-    if (kstHour !== settings.hour) {
+    if (!settings.hours.includes(kstHour)) {
       return;
     }
 
