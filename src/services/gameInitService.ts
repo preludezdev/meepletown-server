@@ -31,7 +31,6 @@ export const initializeGameData = async () => {
     }
 
     if (gamesToSync.length === 0) {
-      console.log('✅ 모든 인기 게임이 이미 동기화되어 있습니다.');
       return;
     }
 

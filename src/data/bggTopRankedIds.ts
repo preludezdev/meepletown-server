@@ -25,22 +25,38 @@ const parseCsvLine = (line: string): { id: number; name: string; rank: number } 
 };
 
 // BGG 랭킹 CSV 파일에서 상위 N개 게임 ID를 읽어 rank 순으로 반환
+// fromRank: 이전까지 완료된 랭킹. 지정 시 (fromRank+1)~(fromRank+limit) 구간 로드
 // CSV: boardgames_ranks_top3000.csv (1~3000), boardgames_ranks_top20000.csv (1~20000)
-export const loadTopRankedIdsFromCsv = async (limit: number = 3000): Promise<number[]> => {
-  const games = await loadTopRankedGamesFromCsv(limit);
+export const loadTopRankedIdsFromCsv = async (
+  limit: number = 3000,
+  fromRank?: number
+): Promise<number[]> => {
+  const games = await loadTopRankedGamesFromCsv(limit, fromRank);
   return games.map((g) => g.bggId);
 };
 
 // 랭킹 정보(id + name + rank) 포함 버전
 // limit > 3000 이면 top20000.csv 사용, else top3000.csv
-export const loadTopRankedGamesFromCsv = async (limit: number = 3000): Promise<BggRankedGame[]> => {
-  const csvName = limit > 3000 ? 'boardgames_ranks_top20000.csv' : 'boardgames_ranks_top3000.csv';
+// fromRank: 지정 시 (fromRank+1)~(fromRank+limit) 구간만 반환 (이어서 동기화용)
+export const loadTopRankedGamesFromCsv = async (
+  limit: number = 3000,
+  fromRank?: number
+): Promise<BggRankedGame[]> => {
+  const needTop20000 = limit > 3000 || ((fromRank ?? 0) + limit > 3000);
+  const csvName = needTop20000 ? 'boardgames_ranks_top20000.csv' : 'boardgames_ranks_top3000.csv';
   const csvPath = path.join(__dirname, csvName);
 
   if (!fs.existsSync(csvPath)) {
     console.warn('[BGG 랭킹] CSV 파일이 없습니다:', csvPath);
     return [];
   }
+
+  const csvMax = csvName.includes('20000') ? 20000 : 3000;
+  const minRank = fromRank != null ? fromRank + 1 : 1;
+  const maxRank =
+    fromRank != null
+      ? Math.min(fromRank + limit, csvMax)
+      : Math.min(limit, csvMax);
 
   return new Promise((resolve, reject) => {
     const games: BggRankedGame[] = [];
@@ -59,7 +75,7 @@ export const loadTopRankedGamesFromCsv = async (limit: number = 3000): Promise<B
       }
 
       const parsed = parseCsvLine(line);
-      if (parsed && parsed.rank >= 1 && parsed.rank <= limit) {
+      if (parsed && parsed.rank >= minRank && parsed.rank <= maxRank) {
         games.push({ bggId: parsed.id, name: parsed.name, rank: parsed.rank });
       }
     });

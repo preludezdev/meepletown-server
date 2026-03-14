@@ -3,6 +3,7 @@ import { env } from '../config/env';
 import { fetchHotGamesFromBGG } from './bggService';
 import { syncGamesFromBGG } from './gameSyncService';
 import { recalculatePopularityScores } from './translationBatchService';
+import { getSyncStats } from './adminSyncStatsService';
 import { loadTopRankedIdsFromCsv } from '../data/bggTopRankedIds';
 import * as settingsRepository from '../repositories/settingsRepository';
 
@@ -23,13 +24,18 @@ const syncBggBatch = async (): Promise<void> => {
     let idsToSync: number[];
 
     if (settings.source === 'csv') {
-      idsToSync = await loadTopRankedIdsFromCsv(settings.size);
+      const stats = await getSyncStats();
+      if (stats.highestRankCompleted >= 20000) {
+        console.log('✅ 상위 2만 랭킹 동기화 완료 (추가 작업 없음)');
+        return;
+      }
+      const fromRank = stats.highestRankCompleted;
+      idsToSync = await loadTopRankedIdsFromCsv(settings.size, fromRank);
       if (idsToSync.length === 0) {
         console.log('⚠️ CSV 랭킹에서 게임을 찾을 수 없습니다 (boardgames_ranks_top3000.csv 확인)');
         return;
       }
-      console.log(`🔄 BGG CSV 랭킹 동기화 시작 (상위 ${settings.size}개)`);
-      console.log(`📋 CSV: ${idsToSync.length}개 게임 로드`);
+      console.log(`🔄 BGG CSV 랭킹 동기화 시작 (${fromRank + 1}~${fromRank + idsToSync.length}위, ${idsToSync.length}개)`);
     } else {
       const hotGameIds = await fetchHotGamesFromBGG();
       if (hotGameIds.length === 0) {
@@ -91,11 +97,16 @@ export const runSyncNow = async (): Promise<void> => {
   let idsToSync: number[];
 
   if (settings.source === 'csv') {
-    idsToSync = await loadTopRankedIdsFromCsv(settings.size);
+    const stats = await getSyncStats();
+    if (stats.highestRankCompleted >= 20000) {
+      throw new Error('상위 2만 랭킹 동기화가 이미 완료되었습니다.');
+    }
+    const fromRank = stats.highestRankCompleted;
+    idsToSync = await loadTopRankedIdsFromCsv(settings.size, fromRank);
     if (idsToSync.length === 0) {
       throw new Error('CSV 랭킹에서 게임을 찾을 수 없습니다 (boardgames_ranks_top3000.csv 확인)');
     }
-    console.log(`🔄 BGG CSV 랭킹 수동 동기화 시작 (상위 ${settings.size}개)`);
+    console.log(`🔄 BGG CSV 랭킹 수동 동기화 시작 (${fromRank + 1}~${fromRank + idsToSync.length}위, ${idsToSync.length}개)`);
   } else {
     const hotGameIds = await fetchHotGamesFromBGG();
     if (hotGameIds.length === 0) {
