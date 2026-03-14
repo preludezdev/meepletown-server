@@ -54,12 +54,16 @@ export const syncGameFromBGG = async (bggId: number): Promise<Game> => {
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // 여러 게임 동기화 (delayMs: BGG API 요청 간 딜레이, rate limit 방지)
+// onProgress: 진행률 콜백 (current, total) => 프로그레스바 등에 사용
 export const syncGamesFromBGG = async (
   bggIds: number[],
-  options?: { delayMs?: number }
+  options?: { delayMs?: number; onProgress?: (current: number, total: number) => void }
 ): Promise<Game[]> => {
   const games: Game[] = [];
   const delayMs = options?.delayMs ?? 0;
+  const onProgress = options?.onProgress;
+  const total = bggIds.length;
+  onProgress?.(0, total);
 
   for (let i = 0; i < bggIds.length; i++) {
     const bggId = bggIds[i];
@@ -67,9 +71,11 @@ export const syncGamesFromBGG = async (
       if (i > 0 && delayMs > 0) await delay(delayMs);
       const game = await syncGameFromBGG(bggId);
       games.push(game);
+      onProgress?.(i + 1, total);
       console.log(`✅ 게임 동기화 완료: ${game.nameEn} (bggId: ${bggId})`);
     } catch (error: any) {
       console.error(`❌ 게임 동기화 실패 (bggId: ${bggId}):`, error.message);
+      onProgress?.(i + 1, total);
       // 에러 발생해도 계속 진행
     }
   }

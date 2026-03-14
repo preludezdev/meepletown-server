@@ -88,7 +88,10 @@ export const initScheduler = () => {
 };
 
 // 즉시 실행 (어드민 API용, DB 설정 반영)
-export const runSyncNow = async (): Promise<void> => {
+// onProgress: 진행률 콜백 (프로그레스바용, API에서는 백그라운드 실행 시 전달)
+export const runSyncNow = async (opts?: {
+  onProgress?: (current: number, total: number) => void;
+}): Promise<void> => {
   const settings = await settingsRepository.getBatchSettings();
   if (!settings.enabled) {
     throw new Error('배치가 비활성화되어 있습니다. 운영 탭에서 활성화해주세요.');
@@ -116,7 +119,10 @@ export const runSyncNow = async (): Promise<void> => {
     console.log('🔄 BGG Hot List 수동 동기화 시작...');
   }
 
-  await syncGamesFromBGG(idsToSync, { delayMs: settings.requestDelayMs });
+  await syncGamesFromBGG(idsToSync, {
+    delayMs: settings.requestDelayMs,
+    onProgress: opts?.onProgress,
+  });
   console.log('✅ BGG 배치 수동 동기화 완료');
 };
 

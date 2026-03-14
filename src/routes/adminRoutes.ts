@@ -13,6 +13,7 @@ router.post('/restore-game-data', adminAuth, adminController.restoreGameData);
 router.get('/batch-settings', adminAuth, adminBatchController.getBatchSettings);
 router.patch('/batch-settings', adminAuth, adminBatchController.updateBatchSettings);
 router.post('/batch-settings/run-now', adminAuth, adminBatchController.runBatchNow);
+router.get('/batch-progress', adminAuth, adminBatchController.getBatchProgressHandler);
 router.get('/posts', adminAuth, adminPostController.getPosts);
 router.delete('/posts/:id', adminAuth, adminPostController.deletePost);
 

@@ -609,6 +609,7 @@
 <header>
   <h1>MeepleOn Admin</h1>
   <span class="badge">INTERNAL</span>
+  <span class="badge" id="headerEnvBadge" style="background:var(--surface2);color:var(--text-muted)">—</span>
   <div class="header-auth">
     <span class="status-dot" id="authDot"></span>
     <input type="password" id="adminKeyInput" placeholder="Admin Secret Key" autocomplete="off" />
@@ -750,6 +751,15 @@
             <button class="btn-primary" id="btnSaveBatch" onclick="saveBatchSettings()">저장</button>
             <button class="btn-secondary" id="btnRunBatchNow" onclick="runBatchNow()">지금 실행</button>
             <span id="batchSaveToast" style="font-size:12px;color:var(--text-muted);margin-left:8px"></span>
+          </div>
+          <div id="batchProgressWrap" style="display:none;margin-top:12px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">
+              <span id="batchProgressText">동기화 중...</span>
+              <span id="batchProgressPct">0%</span>
+            </div>
+            <div style="height:8px;background:var(--surface2);border-radius:4px;overflow:hidden">
+              <div id="batchProgressBar" style="height:100%;width:0%;background:var(--primary);transition:width 0.3s ease"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -1303,16 +1313,66 @@
     }
   }
 
+  let batchProgressPollId = null;
   async function runBatchNow() {
     const btn = document.getElementById('btnRunBatchNow');
+    const wrap = document.getElementById('batchProgressWrap');
+    const bar = document.getElementById('batchProgressBar');
+    const text = document.getElementById('batchProgressText');
+    const pct = document.getElementById('batchProgressPct');
+
     btn.disabled = true;
     try {
-      await apiFetch('/api/v1/admin/batch-settings/run-now', { method: 'POST' });
-      showToast('BGG Hot List 동기화 완료');
+      const res = await fetch(BASE + '/api/v1/admin/batch-settings/run-now', {
+        method: 'POST',
+        headers: adminHeaders(),
+      });
+      if (res.status === 401) { setAuthDot(false); throw new Error('인증 실패'); }
+      const data = await res.json().catch(() => ({}));
+
+      if (res.status === 202) {
+        wrap.style.display = 'block';
+        bar.style.width = '0%';
+        text.textContent = '동기화 중...';
+        pct.textContent = '0%';
+
+        function poll() {
+          apiFetch('/api/v1/admin/batch-progress').then((r) => {
+            const d = r.data || r;
+            const cur = d.current ?? 0;
+            const tot = d.total || 1;
+            const pc = Math.round((cur / tot) * 100);
+            bar.style.width = pc + '%';
+            pct.textContent = pc + '%';
+            text.textContent = d.error ? '실패' : cur + '/' + tot + ' 동기화 완료';
+
+            if (d.status === 'idle') {
+              clearInterval(batchProgressPollId);
+              batchProgressPollId = null;
+              wrap.style.display = 'none';
+              btn.disabled = false;
+              loadSyncStats();
+              showToast(d.error ? d.error : 'BGG 동기화 완료');
+            }
+          }).catch(() => { clearInterval(batchProgressPollId); btn.disabled = false; wrap.style.display = 'none'; });
+        }
+        poll();
+        batchProgressPollId = setInterval(poll, 1000);
+        showToast('배치가 시작되었습니다');
+        return;
+      }
+      if (res.status === 409) {
+        showToast('이미 배치가 실행 중입니다');
+        btn.disabled = false;
+        return;
+      }
+      if (!res.ok) throw new Error(data.error?.message || 'HTTP ' + res.status);
+      showToast(data.data?.message || '동기화 완료');
+      loadSyncStats();
     } catch (e) {
       showToast(e.message || '실행 실패');
     } finally {
-      btn.disabled = false;
+      if (!batchProgressPollId) btn.disabled = false;
     }
   }
 
@@ -2096,8 +2156,29 @@
     }
   };
 
+  /* ── 환경 배지 (상단바) ── */
+  function updateHeaderEnvBadge() {
+    const el = document.getElementById('headerEnvBadge');
+    if (!el) return;
+    const h = window.location.hostname.toLowerCase();
+    if (h.includes('staging') || h.includes('stg-')) {
+      el.textContent = 'Staging (개발)';
+      el.style.background = 'rgba(234,179,8,0.2)';
+      el.style.color = 'var(--yellow)';
+    } else if (h === 'localhost' || h === '127.0.0.1') {
+      el.textContent = 'Local';
+      el.style.background = 'var(--surface2)';
+      el.style.color = 'var(--text-muted)';
+    } else {
+      el.textContent = 'Production (리얼)';
+      el.style.background = 'rgba(34,197,94,0.2)';
+      el.style.color = 'var(--green)';
+    }
+  }
+
   /* ── Init ── */
   window.addEventListener('DOMContentLoaded', () => {
+    updateHeaderEnvBadge();
     const saved = getKey();
     if (saved) {
       document.getElementById('adminKeyInput').value = saved;

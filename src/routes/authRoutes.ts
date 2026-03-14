@@ -74,7 +74,7 @@ router.get('/me', authenticate, authController.getCurrentUser);
  *             properties:
  *               phoneNumber:
  *                 type: string
- *                 description: E.164 형식 전화번호 (예: +821012345678)
+ *                 description: "E.164 형식 전화번호 (예 +821012345678)"
  *     responses:
  *       200:
  *         description: 인증 완료, 사용자 정보 반환
